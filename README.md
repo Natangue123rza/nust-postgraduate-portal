@@ -21,8 +21,7 @@ This system provides a centralized and structured web-based solution.
 - Develop a secure role-based portal for postgraduate thesis management.
 - Allow students to upload proposals and final thesis.
 - Allow the Head of Department (HOD) to assign internal and external examiners.
-- Provide digital evaluation forms for examiners.
-- Automate mark calculations and store final results.
+
 
 ---
 
