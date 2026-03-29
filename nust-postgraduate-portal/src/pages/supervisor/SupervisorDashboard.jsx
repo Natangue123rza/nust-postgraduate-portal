@@ -1,6 +1,6 @@
-// src/pages/superviser/superviserDashboard.jsx
+// src/pages/supervisor/supervisorDashboard.jsx
 
-function superviserDashboard() {
+function SupervisorDashboard() {
  
     return(
 
@@ -14,23 +14,5 @@ function superviserDashboard() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // We export it so other files (like our router) can use it
-export default superviserDashboard;
+export default SupervisorDashboard;

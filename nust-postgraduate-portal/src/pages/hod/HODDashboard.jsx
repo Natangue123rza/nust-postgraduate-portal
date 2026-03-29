@@ -2,7 +2,7 @@
 
 //This is the main page the HOD sees when they logging in
 
-function HodDashboard() {
+function HODDashboard() {
 
     return(
 
@@ -16,4 +16,4 @@ function HodDashboard() {
 
 
 // We export it so other files (like our router) can use it
-export default HodDashboard
+export default HODDashboard

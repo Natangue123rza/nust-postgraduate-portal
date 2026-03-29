@@ -2,7 +2,7 @@
 
 // This is the main page a examiner sees after loggin in
 
-function examinerDashboard() {
+function ExaminerDashboard() {
 
     return(
         <div>
@@ -14,4 +14,4 @@ function examinerDashboard() {
 
 // We export it so other files (like our router) can use it
 
-export default examinerDashboard;
+export default ExaminerDashboard;
