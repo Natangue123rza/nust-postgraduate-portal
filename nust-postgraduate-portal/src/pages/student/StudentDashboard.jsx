@@ -8,7 +8,7 @@ function StudentDashboard() {
     return (
         <div>
             <h1>StudentDashboard</h1>
-            <p>Welcome, Studnet!</p>
+            <p>Welcome, Student!</p>
             
         </div>
         

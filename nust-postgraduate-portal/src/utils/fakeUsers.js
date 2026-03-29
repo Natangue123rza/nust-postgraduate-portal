@@ -27,10 +27,10 @@ const fakeUsers = [{
 {
 
     id: 3 ,
-    name: "Prof. Filimon Superviser" ,
-    email: "superviser@nust.na" ,
-    password: "superviser123" ,
-    role: "superviser"
+    name: "Prof. Filimon Supervisor" ,
+    email: "supervisor@nust.na" ,
+    password: "supervisor123" ,
+    role: "supervisor"
 
 
 },
@@ -50,4 +50,4 @@ const fakeUsers = [{
 
 
 //We export it so other files can import and use it
-export default App
+export default fakeUsers
