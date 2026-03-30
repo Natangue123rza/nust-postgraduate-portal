@@ -5,6 +5,10 @@
 // Route = one single path-to-page mapping
 import { Routes, Route } from 'react-router-dom'
 
+// Import our ProtectedRoute guard
+import ProtectedRoute from './routes/ProtectedRoute'
+
+
 // Import all our pages so we can use them
 import Login from './pages/Login'
 import StudentDashboard from './pages/student/StudentDashboard'
@@ -15,14 +19,37 @@ import ExaminerDashboard from './pages/examiner/ExaminerDashboard'
 function App() {
   return (
     <Routes>
-      {/* The first page everyone sees is Login */}
-      <Route path="/" element={<Login />} />
+    { /*Login is Public - anyone can see it*/ }
+    <Route path="/" element={<Login />} />
 
-      {/* Each role has their own dashboard route */}
-      <Route path="/student" element={<StudentDashboard />} />
-      <Route path="/hod" element={<HODDashboard />} />
-      <Route path="/supervisor" element={<SupervisorDashboard />} />
-      <Route path="/examiner" element={<ExaminerDashboard />} />
+    {/* Student route - only students allowed */ }
+    <Route path='/student' element={
+      <ProtectedRoute allowedRoles={['student']}>
+        <StudentDashboard/>
+        </ProtectedRoute>
+    }/>
+
+    {/* HOD route -only HOD allowed */}
+    <Route path="/hod" element={
+      <ProtectedRoute allowedRoles={['hod']}>
+        <HODDashboard />
+      </ProtectedRoute>
+    } />
+
+    {/* Supervisor route - only supervisor allowed */}
+    <Route  path="/supervisor" element= {
+      <ProtectedRoute allowedRoles={['supervisor']}>
+      <SupervisorDashboard/>
+      </ProtectedRoute>
+    }/>
+
+    {/* Examiner route - only examiner allowed */}
+    <Route path="/examiner" element={
+      <ProtectedRoute allowedRoles={['examiner']}>
+       <ExaminerDashboard/>
+      </ProtectedRoute>
+    }
+     />
     </Routes>
   )
 }
