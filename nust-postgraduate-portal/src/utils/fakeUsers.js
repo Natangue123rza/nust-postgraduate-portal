@@ -7,7 +7,7 @@
 const fakeUsers = [{
     
     id: 1,
-    name: "David Student" ,
+    name: "David Mbidi " ,
     email: "student@nust.na" ,
     password: "student123" ,
     role: "student" ,
@@ -17,7 +17,7 @@ const fakeUsers = [{
 
 {
     id: 2 ,
-    name: "Dr. Simon HOD" , 
+    name: "Dr. Simon " , 
     email: "hod@nust.na" ,
     password: "hod123" ,
     role: "hod"
@@ -27,7 +27,7 @@ const fakeUsers = [{
 {
 
     id: 3 ,
-    name: "Prof. Filimon Supervisor" ,
+    name: "Prof. Filimon" ,
     email: "supervisor@nust.na" ,
     password: "supervisor123" ,
     role: "supervisor"
@@ -38,7 +38,7 @@ const fakeUsers = [{
 {
   
     id: 4 , 
-    name: "Dr. Kapuire Examiner " ,
+    name: "Dr. Kapuire" ,
     email: "examiner@nust.na" ,
     password: "examiner123" ,
     role: "examiner"

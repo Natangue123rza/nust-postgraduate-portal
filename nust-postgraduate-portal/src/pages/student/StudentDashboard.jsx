@@ -1,5 +1,5 @@
 // src/pages/student/StudentDashboard.jsx
-
+import Navbar from "../../components/Navbar";
 // This is the main page a student sees after logging in
 
 function StudentDashboard() {
@@ -7,12 +7,16 @@ function StudentDashboard() {
 
     return (
         <div>
+            {/* Navbar appears at the top of every protected page */}
+            <Navbar />
+            <div style={{padding: '20px'}}>
             <h1>StudentDashboard</h1>
             <p>Welcome, Student!</p>
             
         </div>
+        </div>
         
-    );
+    )
 }
 
 
