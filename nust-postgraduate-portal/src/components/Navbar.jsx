@@ -16,56 +16,70 @@ function Navbar() {
     }
 
     return (
-        <nav style={{
+         <nav style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '12px 30px',
+      backgroundColor: '#002147',
+      color: 'white',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+    }}>
 
-            display: 'flex' ,
-            justifyContent: 'space-between' ,
-            alignItems: 'center' ,
-            padding: '10px 20px' ,
-            backgroundColor: '#003366' ,
-            color: 'white'
+      {/* Left side - Portal name */}
+      <div>
+        <h2 style={{ margin: 0, fontSize: '16px', letterSpacing: '1px' }}>
+          NUST Postgraduate Portal
+        </h2>
+        <p style={{ margin: 0, fontSize: '11px', color: '#aaaaaa' }}>
+          Faculty of Computing and Informatics
+        </p>
+      </div>
+
+      {/* Right side - User info and logout */}
+      {user && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '15px'
         }}>
 
-            {/* Left side - Portal name */}
-            <h2 style={{margin: 0 }}>
-                NUST Postgraduate Portal
-            </h2>
+          {/* User name */}
+          <span style={{ fontSize: '14px' }}>
+            {user.name}
+          </span>
 
-            {/* Right side - User info and logout */}
-            {user && (
-                <div style={{ display: 'flex', alignItems: 'center' , gap: '15px'}}>
-                
-                    {/* Show logged in user's name and role  */}
-                      <span>Welcome, {user.name}</span>
+          {/* Role badge */}
           <span style={{
-            backgroundColor: '#0055a5',
-            padding: '3px 10px',
+            backgroundColor: '#8B0000',
+            padding: '4px 12px',
             borderRadius: '12px',
-            fontSize: '12px',
-            textTransform: 'uppercase'
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
           }}>
             {user.role}
-            </span>
+          </span>
 
-            {/* Logout button */}
-            <button
-            onClick ={handleLogout}
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
             style={{
-                backgroundColor: 'white' ,
-             color: '#003366',
-              border: 'none',
+              backgroundColor: 'transparent',
+              color: 'white',
+              border: '1px solid white',
               padding: '6px 14px',
               borderRadius: '4px',
-              cursor: 'pointer',
+              fontSize: '13px',
               fontWeight: 'bold'
             }}>
-                Logout
-                </button>
+            Logout
+          </button>
 
-                </div>
-            ) }
+        </div>
+      )}
 
-            </nav>
+    </nav>
     )
 }
 
