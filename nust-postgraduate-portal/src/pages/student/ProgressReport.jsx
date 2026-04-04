@@ -29,8 +29,41 @@ function ProgressReport() {
   // This runs when student submits the form
   const handleSubmit = () => {
 
-    // We 'll fill this in after building the form
-    console.log('Form Submitted!')
+   //Step 1: Check required fields are not empty
+   if (!researchProblem || !objectives || !activitiesCompleted ) {
+
+    alert('Please fill in all required fields before submitting.')
+    return
+   }
+
+   //Step 2: Build the report object
+
+   //This is the data we could send to backend later
+   const report = {
+    studentName : user.name,
+    studentDegree : user.degree,
+    submittedAt : new Date().toLocaleDateString(),
+    researchProblem,
+    objectives,
+    activitiesCompleted,
+    activitiesInProgress,
+    activitiesOutstanding,
+    onSchedule,
+    onBudget,
+    onTarget,
+    adjustments,
+    challenges,
+    risks,
+    studentComments,
+    supervisorComments: '' // empty until superviser fills it
+   }
+
+   // Step 3: for now log it - later this goes to a database
+   console.log('Report submitted:', report)
+
+   //Step 4: Show success and go back to dashboard
+   alert('Progress report submitted successfully!')
+   navigate('/student')
   }
 
   return(
@@ -422,7 +455,8 @@ function ProgressReport() {
     borderRadius: '4px',
     fontSize: '16px',
     fontWeight: 'bold',
-    marginBottom: '30px'
+    marginBottom: '30px',
+    cursor:"pointer"
   }}>
   Submit Progress Report
 </button>
