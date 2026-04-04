@@ -44,6 +44,15 @@ const fakeUsers = [{
     role: "examiner"
 
 
+},
+
+{
+    id: 5,
+    name: "Paulina Efriam",
+    email: "phdstudent@nust.na",
+    password: "phd123",
+    role: "student",
+    degree: "PhD"  // ← different degree type
 }
 
 ]

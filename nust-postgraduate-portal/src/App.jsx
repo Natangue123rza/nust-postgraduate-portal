@@ -16,6 +16,7 @@ import HODDashboard from './pages/hod/HODDashboard'
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import ExaminerDashboard from './pages/examiner/ExaminerDashboard'
 import ProgressReport from './pages/student/ProgressReport'
+import AssignExaminers from './pages/hod/AssignExaminers'
 
 
 function App() {
@@ -58,6 +59,13 @@ function App() {
 <Route path="/student/progress-report" element={
   <ProtectedRoute allowedRoles={['student']}>
     <ProgressReport />
+  </ProtectedRoute>
+} />
+
+{/* HOD Assign Examiners */}
+<Route path="/hod/assign-examiners" element={
+  <ProtectedRoute allowedRoles={['hod']}>
+    <AssignExaminers />
   </ProtectedRoute>
 } />
 
