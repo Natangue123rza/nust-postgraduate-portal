@@ -15,6 +15,8 @@ import StudentDashboard from './pages/student/StudentDashboard'
 import HODDashboard from './pages/hod/HODDashboard'
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import ExaminerDashboard from './pages/examiner/ExaminerDashboard'
+import ProgressReport from './pages/student/ProgressReport'
+
 
 function App() {
   return (
@@ -50,6 +52,16 @@ function App() {
       </ProtectedRoute>
     }
      />
+
+     {/* Student Progress Report - only student allowed */}
+    {/* Student Progress Report - only students allowed */}
+<Route path="/student/progress-report" element={
+  <ProtectedRoute allowedRoles={['student']}>
+    <ProgressReport />
+  </ProtectedRoute>
+} />
+
+     
     </Routes>
   )
 }
