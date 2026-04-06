@@ -71,7 +71,9 @@ function Navbar() {
               padding: '6px 14px',
               borderRadius: '4px',
               fontSize: '13px',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              cursor: "pointer"
+
             }}>
             Logout
           </button>

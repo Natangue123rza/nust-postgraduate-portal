@@ -17,6 +17,10 @@ import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import ExaminerDashboard from './pages/examiner/ExaminerDashboard'
 import ProgressReport from './pages/student/ProgressReport'
 import AssignExaminers from './pages/hod/AssignExaminers'
+import EvaluationForm from './pages/examiner/EvaluationForm' 
+
+
+
 
 
 function App() {
@@ -66,6 +70,13 @@ function App() {
 <Route path="/hod/assign-examiners" element={
   <ProtectedRoute allowedRoles={['hod']}>
     <AssignExaminers />
+  </ProtectedRoute>
+} />
+
+{/* Examiner Evaluation Form */}
+<Route path="/examiner/evaluate" element={
+  <ProtectedRoute allowedRoles={['examiner']}>
+    <EvaluationForm />
   </ProtectedRoute>
 } />
 

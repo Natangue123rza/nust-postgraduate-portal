@@ -94,7 +94,8 @@ function AssignExaminers() {
             padding: '8px 16px',
             borderRadius: '4px',
             marginBottom: '25px',
-            fontSize: '13px'
+            fontSize: '13px',
+            cursor:"pointer"
           }}>
           ← Back to Dashboard
         </button>
