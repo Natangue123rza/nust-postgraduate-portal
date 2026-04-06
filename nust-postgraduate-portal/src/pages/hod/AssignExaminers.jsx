@@ -4,6 +4,7 @@ import { useState } from "react";
 import Navbar from "../../components/Navbar";
 import { useNavigate } from "react-router-dom";
 import fakeUsers from "../../utils/fakeUsers";
+import { calculateFinalMark } from "../../utils/calculateMarks";
 
 
 function AssignExaminers() {
@@ -12,6 +13,9 @@ function AssignExaminers() {
 
     // Get only students from fakeUsers
     const students = fakeUsers.filter(u => u.role === 'student')
+
+    // Get only examiners from fakeUsers
+    const examiners = fakeUsers.filter(u => u.role === 'examiner')
 
     // Track which student is selected
     const [selectedStudent, setSelectedStudent] = useState(null)
@@ -23,6 +27,8 @@ function AssignExaminers() {
     //Track if assignment was saved
     const [assigned, setAssigned] = useState(false)
 
+    
+
     // When HOD clicks a student card
     const handleSelectStudent = (student) => {
 
@@ -32,31 +38,48 @@ function AssignExaminers() {
         setAssigned(false)
     }
 
-    //When hod submits the examiner assignment
-    const handleAssign = () => {
+    // Store mark calculation result
+   const [markResult, setMarkResult] = useState(null)
 
-        //Internal examiner is always required
-        if(!internalExaminer) {
-            alert('Please enter an internal examiner.')
-            return
-        }
+   const handleAssign = () => {
 
-        // External examiner only required for PHD
-        if(selectedStudent.degree === 'PhD' && !externalExaminer) {
-            alert('PhD students require both an internal and external examiner.')
-            return
-        }
+  // Internal examiner always required
+  if (!internalExaminer) {
+    alert('Please enter an internal examiner.')
+    return
+  }
 
-        // Show succcess
-        setAssigned(true)
-        console.log('Assigned:' , {
-            student: selectedStudent.name,
-            degree: selectedStudent.degree,
-            internalExaminer,
-            externalExaminer: selectedStudent.degree === 'PhD' ? externalExaminer : 'N/A'
+  // External examiner only required for PhD
+  if (selectedStudent.degree === 'PhD' && !externalExaminer) {
+    alert('PhD students require both an internal and external examiner.')
+    return
+  }
 
-        })
-    }
+  // Simulate marks for demonstration
+  // In a real system these would come from the database
+  const simulatedInternal = 72
+  const simulatedExternal = selectedStudent.degree === 'PhD' ? 65 : null
+
+  // Calculate final mark using our utility
+  const result = calculateFinalMark(
+    selectedStudent.degree,
+    simulatedInternal,
+    simulatedExternal
+  )
+
+  // Store result to display
+  setMarkResult(result)
+  setAssigned(true)
+
+  console.log('Assigned:', {
+    student: selectedStudent.name,
+    degree: selectedStudent.degree,
+    internalExaminer,
+    externalExaminer: selectedStudent.degree === 'PhD' ? externalExaminer : 'N/A',
+    markResult: result
+  })
+
+}
 
      return (
     <div>
@@ -183,71 +206,111 @@ function AssignExaminers() {
             </p>
 
             {/* Internal Examiner */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                fontWeight: 'bold',
-                color: '#002147',
-                marginBottom: '6px'
-              }}>
-                Internal Examiner Name: *
-              </label>
-              <input
-                type="text"
-                value={internalExaminer}
-                onChange={(e) => setInternalExaminer(e.target.value)}
-                placeholder="Enter internal examiner's full name"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #cccccc',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
+          {/* Internal Examiner Dropdown */}
+<div style={{ marginBottom: '20px' }}>
+     <label style={{
+       display: 'block',
+        fontWeight: 'bold',
+         color: '#002147',
+         marginBottom: '6px'
+          }}>
+          Internal Examiner: *
+          </label>
+           <select
+           value={internalExaminer}
+           onChange={(e) => setInternalExaminer(e.target.value)}
+            style={{
+            width: '100%',
+            padding: '10px',
+             border: '1px solid #cccccc',
+             borderRadius: '4px',
+             fontSize: '14px',
+             backgroundColor: 'white'
+             }}>
+            <option value="">-- Select Internal Examiner --</option>
+            {examiners.map(examiner => (
+            <option key={examiner.id} value={examiner.name}>
+             {examiner.name}
+              </option>
+              ))}
+              </select>
+               </div>
 
-            {/* External Examiner - only shows for PhD */}
-            {selectedStudent.degree === 'PhD' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  fontWeight: 'bold',
-                  color: '#002147',
-                  marginBottom: '6px'
-                }}>
-                  External Examiner Name: *
-                </label>
-                <input
-                  type="text"
-                  value={externalExaminer}
-                  onChange={(e) => setExternalExaminer(e.target.value)}
-                  placeholder="Enter external examiner's full name"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-            )}
+          {/* External Examiner Dropdown - only shows for PhD */}
+{selectedStudent.degree === 'PhD' && (
+  <div style={{ marginBottom: '20px' }}>
+    <label style={{
+      display: 'block',
+      fontWeight: 'bold',
+      color: '#002147',
+      marginBottom: '6px'
+    }}>
+      External Examiner: *
+    </label>
+    <select
+      value={externalExaminer}
+      onChange={(e) => setExternalExaminer(e.target.value)}
+      style={{
+        width: '100%',
+        padding: '10px',
+        border: '1px solid #cccccc',
+        borderRadius: '4px',
+        fontSize: '14px',
+        backgroundColor: 'white'
+      }}>
+      <option value="">-- Select External Examiner --</option>
+      {/* Filter out already selected internal examiner */}
+      {examiners
+        .filter(examiner => examiner.name !== internalExaminer)
+        .map(examiner => (
+          <option key={examiner.id} value={examiner.name}>
+            {examiner.name}
+          </option>
+        ))
+      }
+    </select>
+  </div>
+)}
 
-            {/* Success message */}
-            {assigned && (
-              <div style={{
-                backgroundColor: '#e6f4ea',
-                border: '1px solid #4caf50',
-                padding: '12px',
-                borderRadius: '4px',
-                marginBottom: '20px',
-                color: '#2e7d32',
-                fontSize: '14px'
-              }}>
-                ✅ Examiners successfully assigned to {selectedStudent.name}!
-              </div>
-            )}
+           {/* Success message */}
+  {assigned && markResult && (
+  <div style={{
+    backgroundColor: markResult.discrepancy ? '#fff3e0' : '#e6f4ea',
+    border: `1px solid ${markResult.discrepancy ? '#ff9800' : '#4caf50'}`,
+    padding: '15px',
+    borderRadius: '4px',
+    marginBottom: '20px',
+    fontSize: '14px'
+  }}>
+    {/* Assignment confirmed */}
+    <p style={{ 
+      color: '#2e7d32', 
+      fontWeight: 'bold',
+      marginBottom: '8px' 
+    }}>
+      ✅ Examiners assigned to {selectedStudent.name}!
+    </p>
+
+    {/* Mark result message */}
+    <p style={{ 
+      color: markResult.discrepancy ? '#e65100' : '#333',
+      marginBottom: '4px'
+    }}>
+      {markResult.message}
+    </p>
+
+    {/* Status badge */}
+    <span style={{
+      backgroundColor: markResult.discrepancy ? '#ff9800' : '#002147',
+      color: 'white',
+      padding: '3px 10px',
+      borderRadius: '12px',
+      fontSize: '11px'
+    }}>
+      Status: {markResult.status}
+    </span>
+  </div>
+)}
 
             {/* Assign button */}
             <button
