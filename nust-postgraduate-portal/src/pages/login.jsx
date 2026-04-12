@@ -19,32 +19,54 @@ function Login() {
   // Get the login function from our AuthContext
   const { login } = useAuth()
 
-  // This will run when the user clicks Login
- const handleLogin = () => {
+ const handleLogin = async () => {
 
-  // Step 1: Search fakeUsers for matching email AND password
-  const user = fakeUsers.find(
-    (u) => u.email === email && u.password === password
-  )
-
-  // Step 2: If no user found, show error and stop
-  if (!user) {
-    alert('Invalid email or password. Please try again.')
+  // Check fields are filled
+  if (!email || !password) {
+    alert('Please enter your email and password.')
     return
   }
 
-  // Step 3: Save user to AuthContext notice board
-  login(user)
+  try {
 
-  // Step 4: Redirect based on role
-  if (user.role === 'student') {
-    navigate('/student')
-  } else if (user.role === 'hod') {
-    navigate('/hod')
-  } else if (user.role === 'supervisor') {
-    navigate('/supervisor')
-  } else if (user.role === 'examiner') {
-    navigate('/examiner')
+    // Send login request to our backend API
+    const response = await fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    })
+
+    // Get response data
+    const data = await response.json()
+
+    // If login failed
+    if (!response.ok) {
+      alert(data.message || 'Invalid email or password.')
+      return
+    }
+
+    // Save token to localStorage
+    localStorage.setItem('token', data.token)
+
+    // Save user to AuthContext
+    login(data.user)
+
+    // Redirect based on role
+    if (data.user.role === 'student') {
+      navigate('/student')
+    } else if (data.user.role === 'hod') {
+      navigate('/hod')
+    } else if (data.user.role === 'supervisor') {
+      navigate('/supervisor')
+    } else if (data.user.role === 'examiner') {
+      navigate('/examiner')
+    }
+
+  } catch (err) {
+    alert('Could not connect to server. Please try again.')
+    console.error(err)
   }
 
 }

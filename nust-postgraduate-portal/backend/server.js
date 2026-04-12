@@ -1,19 +1,21 @@
 // backend/server.js
-
 const express = require('express')
 const cors = require('cors')
 require('dotenv').config()
 
 const app = express()
 
-// Middleware
-// Allows React frontend to talk to this backend
+// Middleware MUST come before routes
 app.use(cors())
+app.use(express.json())  // ← moved up here
 
-// Allows server to read JSON from requests
-app.use(express.json())
+// Import routes
+const authRoutes = require('./routes/auth')
 
-// Test route - just to confirm server is running
+// Routes
+app.use('/api/auth', authRoutes)
+
+// Test route
 app.get('/', (req, res) => {
   res.json({ message: '✅ NUST Portal API is running!' })
 })
@@ -28,9 +30,6 @@ app.get('/test-db', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
-
-
-
 
 // Start server
 const PORT = process.env.PORT || 5000
