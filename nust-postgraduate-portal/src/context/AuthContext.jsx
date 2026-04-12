@@ -17,6 +17,13 @@ export function AuthProvider({ children }) {
     // starts as null because nobody is logged in yet
     const [user , setUser] = useState(null)
 
+    // Shared deadlines set by HOD
+const [deadlines, setDeadlines] = useState({
+    proposal: '',
+    progressReport: '',
+    thesis: ''
+})
+
     // login function saves the user to our notice board
     const login = (userData) => {
         setUser(userData)
@@ -27,9 +34,13 @@ export function AuthProvider({ children }) {
         setUser(null)
     }
 
+
+
+
+
     return (
         // We share user, login and logout with the whole app
-        <AuthContext.Provider value={{ user, login , logout}}>
+        <AuthContext.Provider value={{ user, login , logout, deadlines, setDeadlines}}>
             {children}
         </AuthContext.Provider>
     )

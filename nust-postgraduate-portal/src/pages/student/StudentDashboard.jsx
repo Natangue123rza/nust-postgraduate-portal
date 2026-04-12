@@ -8,7 +8,38 @@ function StudentDashboard() {
   // Get logged in user info
   const { user } = useAuth()
   const navigate = useNavigate()
+  // Get deadlines from AuthContext
+const { deadlines } = useAuth()
 
+// Calculate time remaining for a deadline
+const getTimeRemaining = (deadlineDate) => {
+  if (!deadlineDate) return null
+
+  const now = new Date()
+  const deadline = new Date(deadlineDate)
+  const difference = deadline - now
+
+  if (difference <= 0) {
+    return { expired: true, text: '❌ Deadline passed' }
+  }
+
+  const days = Math.floor(difference / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+
+  if (days > 0) {
+    return {
+      expired: false,
+      urgent: days <= 3,
+      text: `⏰ ${days} day${days > 1 ? 's' : ''} and ${hours} hour${hours > 1 ? 's' : ''} left`
+    }
+  }
+
+  return {
+    expired: false,
+    urgent: true,
+    text: `⚠️ Less than ${hours + 1} hour${hours > 1 ? 's' : ''} left`
+  }
+}
  return (
     <div>
       <Navbar />
@@ -115,6 +146,127 @@ function StudentDashboard() {
               Submit your final thesis for examination
             </p>
           </div>
+          {/* Deadlines Section */}
+{(deadlines.proposal || deadlines.progressReport || deadlines.thesis) && (
+  <div style={{ marginTop: '30px' }}>
+
+    <h2 style={{
+      color: '#002147',
+      marginBottom: '20px',
+      fontSize: '18px',
+      borderLeft: '4px solid #8B0000',
+      paddingLeft: '10px'
+    }}>
+      ⏰ Submission Deadlines
+    </h2>
+
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '8px',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
+      overflow: 'hidden'
+    }}>
+
+      {/* Proposal deadline */}
+      {deadlines.proposal && (
+        <div style={{
+          padding: '15px 20px',
+          borderBottom: '1px solid #f0f0f0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <p style={{ fontWeight: 'bold', color: '#002147', marginBottom: '3px' }}>
+              📄 Research Proposal
+            </p>
+            <p style={{ fontSize: '12px', color: '#666' }}>
+              Due: {new Date(deadlines.proposal).toLocaleString()}
+            </p>
+          </div>
+          <span style={{
+            backgroundColor: getTimeRemaining(deadlines.proposal)?.expired ? '#fce4e4' :
+              getTimeRemaining(deadlines.proposal)?.urgent ? '#fff3e0' : '#e6f4ea',
+            color: getTimeRemaining(deadlines.proposal)?.expired ? '#c62828' :
+              getTimeRemaining(deadlines.proposal)?.urgent ? '#e65100' : '#2e7d32',
+            padding: '5px 12px',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}>
+            {getTimeRemaining(deadlines.proposal)?.text}
+          </span>
+        </div>
+      )}
+
+      {/* Progress report deadline */}
+      {deadlines.progressReport && (
+        <div style={{
+          padding: '15px 20px',
+          borderBottom: '1px solid #f0f0f0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <p style={{ fontWeight: 'bold', color: '#002147', marginBottom: '3px' }}>
+              📋 Progress Report
+            </p>
+            <p style={{ fontSize: '12px', color: '#666' }}>
+              Due: {new Date(deadlines.progressReport).toLocaleString()}
+            </p>
+          </div>
+          <span style={{
+            backgroundColor: getTimeRemaining(deadlines.progressReport)?.expired ? '#fce4e4' :
+              getTimeRemaining(deadlines.progressReport)?.urgent ? '#fff3e0' : '#e6f4ea',
+            color: getTimeRemaining(deadlines.progressReport)?.expired ? '#c62828' :
+              getTimeRemaining(deadlines.progressReport)?.urgent ? '#e65100' : '#2e7d32',
+            padding: '5px 12px',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}>
+            {getTimeRemaining(deadlines.progressReport)?.text}
+          </span>
+        </div>
+      )}
+
+      {/* Thesis deadline */}
+      {deadlines.thesis && (
+        <div style={{
+          padding: '15px 20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <p style={{ fontWeight: 'bold', color: '#002147', marginBottom: '3px' }}>
+              🎓 Thesis Submission
+            </p>
+            <p style={{ fontSize: '12px', color: '#666' }}>
+              Due: {new Date(deadlines.thesis).toLocaleString()}
+            </p>
+          </div>
+          <span style={{
+            backgroundColor: getTimeRemaining(deadlines.thesis)?.expired ? '#fce4e4' :
+              getTimeRemaining(deadlines.thesis)?.urgent ? '#fff3e0' : '#e6f4ea',
+            color: getTimeRemaining(deadlines.thesis)?.expired ? '#c62828' :
+              getTimeRemaining(deadlines.thesis)?.urgent ? '#e65100' : '#2e7d32',
+            padding: '5px 12px',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}>
+            {getTimeRemaining(deadlines.thesis)?.text}
+          </span>
+        </div>
+      )}
+
+    </div>
+  </div>
+)}
+
+          
 
         </div>
       </div>

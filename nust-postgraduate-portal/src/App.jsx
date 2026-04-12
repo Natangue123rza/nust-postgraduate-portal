@@ -24,6 +24,7 @@ import ThesisSubmission from './pages/student/ThesisSubmission'
 import ProgressReportReview from './pages/supervisor/ProgressReportReview'
 import ViewSubmissions from './pages/hod/ViewSubmissions'
 import HDCDecision from './pages/hod/HDCDecision'
+import SetDeadlines from './pages/hod/SetDeadlines'
 
 
 
@@ -127,6 +128,13 @@ function App() {
 <Route path="/hod/hdc-decision" element={
   <ProtectedRoute allowedRoles={['hod']}>
     <HDCDecision />
+  </ProtectedRoute>
+} />
+
+{/* HOD Set Deadlines */}
+<Route path="/hod/deadlines" element={
+  <ProtectedRoute allowedRoles={['hod']}>
+    <SetDeadlines />
   </ProtectedRoute>
 } />
 

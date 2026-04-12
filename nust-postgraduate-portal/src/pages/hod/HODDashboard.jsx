@@ -113,6 +113,27 @@ function HODDashboard() {
             </p>
           </div>
 
+{/* Set Deadlines Card */}
+<div
+  onClick={() => navigate('/hod/deadlines')}
+  style={{
+    backgroundColor: 'white',
+    border: '1px solid #dddddd',
+    borderTop: '4px solid #002147',
+    padding: '25px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    width: '220px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+  }}>
+  <h3 style={{ color: '#002147', marginBottom: '10px' }}>
+    ⏰ Set Deadlines
+  </h3>
+  <p style={{ fontSize: '13px', color: '#666666' }}>
+    Set submission deadlines for proposals and theses
+  </p>
+</div>
+
         </div>
       </div>
     </div>
