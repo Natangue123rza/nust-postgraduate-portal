@@ -23,6 +23,7 @@ import ProposalUpload from './pages/student/ProposalUpload'
 import ThesisSubmission from './pages/student/ThesisSubmission'
 import ProgressReportReview from './pages/supervisor/ProgressReportReview'
 import ViewSubmissions from './pages/hod/ViewSubmissions'
+import HDCDecision from './pages/hod/HDCDecision'
 
 
 
@@ -119,6 +120,13 @@ function App() {
 <Route path="/hod/submissions" element={
   <ProtectedRoute allowedRoles={['hod']}>
     <ViewSubmissions />
+  </ProtectedRoute>
+} />
+
+{/* HOD HDC Decision */}
+<Route path="/hod/hdc-decision" element={
+  <ProtectedRoute allowedRoles={['hod']}>
+    <HDCDecision />
   </ProtectedRoute>
 } />
 
