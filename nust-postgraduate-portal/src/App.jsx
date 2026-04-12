@@ -22,6 +22,7 @@ import StudentList from './pages/supervisor/StudentList'
 import ProposalUpload from './pages/student/ProposalUpload'
 import ThesisSubmission from './pages/student/ThesisSubmission'
 import ProgressReportReview from './pages/supervisor/ProgressReportReview'
+import ViewSubmissions from './pages/hod/ViewSubmissions'
 
 
 
@@ -111,6 +112,13 @@ function App() {
 <Route path="/supervisor/progress-reports" element={
   <ProtectedRoute allowedRoles={['supervisor']}>
     <ProgressReportReview />
+  </ProtectedRoute>
+} />
+
+{/* HOD View Submissions */}
+<Route path="/hod/submissions" element={
+  <ProtectedRoute allowedRoles={['hod']}>
+    <ViewSubmissions />
   </ProtectedRoute>
 } />
 
