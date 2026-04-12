@@ -19,6 +19,8 @@ import ProgressReport from './pages/student/ProgressReport'
 import AssignExaminers from './pages/hod/AssignExaminers'
 import EvaluationForm from './pages/examiner/EvaluationForm' 
 import StudentList from './pages/supervisor/StudentList'
+import ProposalUpload from './pages/student/ProposalUpload'
+import ThesisSubmission from './pages/student/ThesisSubmission'
 
 
 
@@ -86,6 +88,21 @@ function App() {
 <Route path="/supervisor/students" element={
   <ProtectedRoute allowedRoles={['supervisor']}>
     <StudentList />
+  </ProtectedRoute>
+} />
+
+
+{/* Student Proposal Upload */}
+<Route path="/student/proposal" element={
+  <ProtectedRoute allowedRoles={['student']}>
+    <ProposalUpload />
+  </ProtectedRoute>
+} />
+
+{/* Student Thesis Submission */}
+<Route path="/student/thesis" element={
+  <ProtectedRoute allowedRoles={['student']}>
+    <ThesisSubmission />
   </ProtectedRoute>
 } />
 

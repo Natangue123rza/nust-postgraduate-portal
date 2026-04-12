@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 function ProgressReport() {
 
  const { user } = useAuth()   
- const navigate = useNavigate
+ const navigate = useNavigate()
 
  // Each section of the form gets its own state variable
 
