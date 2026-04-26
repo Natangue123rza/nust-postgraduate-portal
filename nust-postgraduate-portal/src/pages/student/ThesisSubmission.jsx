@@ -30,48 +30,65 @@ function ThesisSubmission() {
     setFile(selectedFile)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
 
-    // Check title is filled
-    if (!title) {
-      alert('Please enter your thesis title.')
+  // Check title is filled
+  if (!title) {
+    alert('Please enter your thesis title.')
+    return
+  }
+
+  // Check abstract is filled
+  if (!abstract) {
+    alert('Please enter your thesis abstract.')
+    return
+  }
+
+  // Check file is selected
+  if (!file) {
+    alert('Please upload your thesis PDF.')
+    return
+  }
+
+  // Check declaration is checked
+  if (!declaration) {
+    alert('Please confirm the declaration before submitting.')
+    return
+  }
+
+  try {
+
+    // Send thesis to backend API
+    const response = await fetch('http://localhost:5000/api/theses/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        studentId: user.id,
+        title,
+        abstract,
+        fileName: file.name
+      })
+    })
+
+    const data = await response.json()
+
+    // If duplicate or error
+    if (!response.ok) {
+      alert(data.message)
       return
     }
 
-    // Check abstract is filled
-    if (!abstract) {
-      alert('Please enter your thesis abstract.')
-      return
-    }
-
-    // Check file is selected
-    if (!file) {
-      alert('Please upload your thesis PDF.')
-      return
-    }
-
-    // Check declaration is checked
-    if (!declaration) {
-      alert('Please confirm the declaration before submitting.')
-      return
-    }
-
-    // Build thesis object
-    const thesis = {
-      studentName: user.name,
-      studentDegree: user.degree,
-      title,
-      abstract,
-      fileName: file.name,
-      fileSize: `${(file.size / 1024).toFixed(2)} KB`,
-      submittedAt: new Date().toLocaleDateString(),
-      status: 'Submitted — Awaiting Examiner Assignment'
-    }
-
-    console.log('Thesis submitted:', thesis)
+    // Success
     setSubmitted(true)
 
+  } catch (err) {
+    alert('Could not connect to server. Please try again.')
+    console.error(err)
   }
+
+}
 
   return (
     <div>

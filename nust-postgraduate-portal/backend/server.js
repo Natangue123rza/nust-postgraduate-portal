@@ -13,11 +13,15 @@ app.use(express.json())
 const authRoutes = require('./routes/auth')
 const progressRoutes = require('./routes/progress')
 const periodRoutes = require('./routes/periods')
+const proposalRoutes = require('./routes/proposals')
+const thesisRoutes = require('./routes/theses')
 
 // Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/progress', progressRoutes)
 app.use('/api/periods', periodRoutes)
+app.use('/api/proposals', proposalRoutes)
+app.use('/api/theses', thesisRoutes)
 
 // Test route
 app.get('/', (req, res) => {

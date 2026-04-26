@@ -29,42 +29,59 @@ function ProposalUpload() {
     setFile(selectedFile)
   }
 
-  const handleSubmit = () => {
+ const handleSubmit = async () => {
 
-    // Check title is filled
-    if (!title) {
-      alert('Please enter your research title.')
+  // Check title is filled
+  if (!title) {
+    alert('Please enter your research title.')
+    return
+  }
+
+  // Check description is filled
+  if (!description) {
+    alert('Please enter a brief description.')
+    return
+  }
+
+  // Check file is selected
+  if (!file) {
+    alert('Please upload your proposal PDF.')
+    return
+  }
+
+  try {
+
+    // Send proposal to backend API
+    const response = await fetch('http://localhost:5000/api/proposals/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        studentId: user.id,
+        title,
+        description,
+        fileName: file.name
+      })
+    })
+
+    const data = await response.json()
+
+    // If duplicate or error
+    if (!response.ok) {
+      alert(data.message)
       return
     }
 
-    // Check description is filled
-    if (!description) {
-      alert('Please enter a brief description.')
-      return
-    }
-
-    // Check file is selected
-    if (!file) {
-      alert('Please upload your proposal PDF.')
-      return
-    }
-
-    // Build proposal object
-    const proposal = {
-      studentName: user.name,
-      studentDegree: user.degree,
-      title,
-      description,
-      fileName: file.name,
-      fileSize: `${(file.size / 1024).toFixed(2)} KB`,
-      submittedAt: new Date().toLocaleDateString(),
-      status: 'Pending HDC Review'
-    }
-
-    console.log('Proposal submitted:', proposal)
+    // Success
     setSubmitted(true)
 
+  } catch (err) {
+    alert('Could not connect to server. Please try again.')
+    console.error(err)
   }
+
+}
 
   return (
     <div>
