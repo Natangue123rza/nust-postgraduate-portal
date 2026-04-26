@@ -7,13 +7,10 @@ require('dotenv').config()
 const { poolPromise } = require('../db')
 
 // POST /api/auth/login
-// This route handles login requests from React
 router.post('/login', async (req, res) => {
 
-  // Get email and password from request body
   const { email, password } = req.body
 
-  // Check if email and password were provided
   if (!email || !password) {
     return res.status(400).json({ 
       message: 'Please provide email and password' 
@@ -22,32 +19,25 @@ router.post('/login', async (req, res) => {
 
   try {
 
-    // Search database for user with matching email
     const [rows] = await poolPromise.query(
       'SELECT * FROM users WHERE email = ?',
       [email]
     )
 
-    // If no user found
     if (rows.length === 0) {
       return res.status(401).json({ 
         message: 'Invalid email or password' 
       })
     }
 
-    // Get the user from results
     const user = rows[0]
 
-    // Check if password matches
-    // For now plain text - we'll encrypt later
     if (password !== user.password) {
       return res.status(401).json({ 
         message: 'Invalid email or password' 
       })
     }
 
-    // Create JWT token
-    // This token proves the user is logged in
     const token = jwt.sign(
       { 
         id: user.id, 
@@ -58,7 +48,6 @@ router.post('/login', async (req, res) => {
       { expiresIn: '8h' }
     )
 
-    // Send back token and user info
     res.json({
       message: 'Login successful',
       token,
@@ -76,6 +65,18 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 
+})
+
+// GET /api/auth/students
+router.get('/students', async (req, res) => {
+  try {
+    const [rows] = await poolPromise.query(
+      "SELECT id, name, email, degree FROM users WHERE role = 'student'"
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
 })
 
 module.exports = router

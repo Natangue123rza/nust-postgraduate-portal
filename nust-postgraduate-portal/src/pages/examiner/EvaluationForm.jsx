@@ -1,15 +1,32 @@
 // src/pages/examiner/EvaluationForm.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
-import fakeUsers from '../../utils/fakeUsers'
+import { useAuth } from '../../context/AuthContext'
 
 function EvaluationForm() {
 
-  const navigate = useNavigate()
+ const navigate = useNavigate()
+const { user } = useAuth()
 
-  // Get only students from fakeUsers
-  const students = fakeUsers.filter(u => u.role === 'student')
+// Students fetched from database
+const [students, setStudents] = useState([])
+
+// Fetch students when page loads
+useEffect(() => {
+  const fetchStudents = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/students')
+      const data = await response.json()
+      if (response.ok) {
+        setStudents(data)
+      }
+    } catch (err) {
+      console.error('Error fetching students:', err)
+    }
+  }
+  fetchStudents()
+}, [])
 
   // Track selected student
   const [selectedStudent, setSelectedStudent] = useState(null)
@@ -55,60 +72,85 @@ function EvaluationForm() {
     return null
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
 
-    // Check student is selected
-    if (!selectedStudent) {
-      alert('Please select a student to evaluate.')
-      return
-    }
+  // Check student is selected
+  if (!selectedStudent) {
+    alert('Please select a student to evaluate.')
+    return
+  }
 
-    // Check overall assessment is filled
-    if (!overallAssessment) {
-      alert('Please write an overall assessment.')
-      return
-    }
+  // Check overall assessment is filled
+  if (!overallAssessment) {
+    alert('Please write an overall assessment.')
+    return
+  }
 
-    // Check all sections are filled
-    if (!sectionA || !sectionB || !sectionC || !sectionD || !sectionE) {
-      alert('Please fill in marks for all sections.')
-      return
-    }
+  // Check all sections are filled
+  if (!sectionA || !sectionB || !sectionC || !sectionD || !sectionE) {
+    alert('Please fill in marks for all sections.')
+    return
+  }
 
-    // Validate mark ranges
-    const error = validateMarks()
-    if (error) {
-      alert(error)
-      return
-    }
+  // Validate mark ranges
+  const error = validateMarks()
+  if (error) {
+    alert(error)
+    return
+  }
 
-    // Check recommendation is selected
-    if (!recommendation) {
-      alert('Please select a recommendation.')
-      return
-    }
+  // Check recommendation is selected
+  if (!recommendation) {
+    alert('Please select a recommendation.')
+    return
+  }
 
-    // Build evaluation object
-    const evaluation = {
-      studentName: selectedStudent.name,
-      studentDegree: selectedStudent.degree,
-      marks: {
+  try {
+
+    // Send evaluation to backend API
+    const response = await fetch('http://localhost:5000/api/evaluations/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        studentId: selectedStudent.id,
+        examinerId: user.id,
+        examinerType: 'internal',
         sectionA: Number(sectionA),
         sectionB: Number(sectionB),
         sectionC: Number(sectionC),
         sectionD: Number(sectionD),
         sectionE: Number(sectionE),
-        total: totalMarks
-      },
-      recommendation,
-      overallAssessment,
-      submittedAt: new Date().toLocaleDateString()
+        totalMark: totalMarks,
+        overallAssessment,
+        recommendation,
+        commentA,
+        commentB,
+        commentC,
+        commentD,
+        commentE
+      })
+    })
+
+    const data = await response.json()
+
+    // If duplicate or error
+    if (!response.ok) {
+      alert(data.message)
+      return
     }
 
-    console.log('Evaluation submitted:', evaluation)
+    // Show final mark message
+    console.log(data.finalMarkMessage)
     setSubmitted(true)
 
+  } catch (err) {
+    alert('Could not connect to server. Please try again.')
+    console.error(err)
   }
+
+}
 
   return (
     <div>
