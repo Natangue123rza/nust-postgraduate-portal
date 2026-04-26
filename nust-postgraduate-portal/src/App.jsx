@@ -25,6 +25,7 @@ import ProgressReportReview from './pages/supervisor/ProgressReportReview'
 import ViewSubmissions from './pages/hod/ViewSubmissions'
 import HDCDecision from './pages/hod/HDCDecision'
 import SetDeadlines from './pages/hod/SetDeadlines'
+import SetAcademicPeriod from './pages/hod/SetAcademicPeriod'
 
 
 
@@ -135,6 +136,13 @@ function App() {
 <Route path="/hod/deadlines" element={
   <ProtectedRoute allowedRoles={['hod']}>
     <SetDeadlines />
+  </ProtectedRoute>
+} />
+
+{/* HOD Set Academic Period */}
+<Route path="/hod/set-period" element={
+  <ProtectedRoute allowedRoles={['hod']}>
+    <SetAcademicPeriod />
   </ProtectedRoute>
 } />
 

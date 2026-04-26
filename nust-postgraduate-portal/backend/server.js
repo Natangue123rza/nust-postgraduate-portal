@@ -5,15 +5,19 @@ require('dotenv').config()
 
 const app = express()
 
-// Middleware MUST come before routes
+// Middleware
 app.use(cors())
-app.use(express.json())  // ← moved up here
+app.use(express.json())
 
 // Import routes
 const authRoutes = require('./routes/auth')
+const progressRoutes = require('./routes/progress')
+const periodRoutes = require('./routes/periods')
 
 // Routes
 app.use('/api/auth', authRoutes)
+app.use('/api/progress', progressRoutes)
+app.use('/api/periods', periodRoutes)
 
 // Test route
 app.get('/', (req, res) => {

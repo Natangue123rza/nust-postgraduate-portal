@@ -1,9 +1,9 @@
 // src/pages/student/ProgressReport.jsx
 
-import { useState } from "react";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from 'react'
 
 
 function ProgressReport() {
@@ -25,46 +25,79 @@ function ProgressReport() {
   const [challenges, setChallenges] = useState('')
   const [risks, setRisks] = useState('')
   const [studentComments, setStudentComments] = useState('')
+  // Active semester from database
+const [activeSemester, setActiveSemester] = useState('')
 
-  // This runs when student submits the form
-  const handleSubmit = () => {
+// Fetch active semester when page loads
+useEffect(() => {
+  const fetchActivePeriod = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/periods/active')
+      const data = await response.json()
+      if (response.ok) {
+        setActiveSemester(`${data.semester} — ${data.academic_year}`)
+      }
+    } catch (err) {
+      console.error('Error fetching period:', err)
+    }
+  }
+  fetchActivePeriod()
+}, [])
 
-   //Step 1: Check required fields are not empty
-   if (!researchProblem || !objectives || !activitiesCompleted ) {
+ const handleSubmit = async () => {
 
+  // Check required fields
+  if (!researchProblem || !objectives || !activitiesCompleted) {
     alert('Please fill in all required fields before submitting.')
     return
-   }
-
-   //Step 2: Build the report object
-
-   //This is the data we could send to backend later
-   const report = {
-    studentName : user.name,
-    studentDegree : user.degree,
-    submittedAt : new Date().toLocaleDateString(),
-    researchProblem,
-    objectives,
-    activitiesCompleted,
-    activitiesInProgress,
-    activitiesOutstanding,
-    onSchedule,
-    onBudget,
-    onTarget,
-    adjustments,
-    challenges,
-    risks,
-    studentComments,
-    supervisorComments: '' // empty until superviser fills it
-   }
-
-   // Step 3: for now log it - later this goes to a database
-   console.log('Report submitted:', report)
-
-   //Step 4: Show success and go back to dashboard
-   alert('Progress report submitted successfully!')
-   navigate('/student')
   }
+
+  try {
+
+    // Send report to backend API
+    const response = await fetch('http://localhost:5000/api/progress/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        studentId: user.id,
+        semester: activeSemester,
+        researchProblem,
+        objectives,
+        activitiesCompleted,
+        activitiesInProgress,
+        activitiesOutstanding,
+        onSchedule,
+        onBudget,
+        onTarget,
+        adjustments,
+        challenges,
+        risks,
+        studentComments
+      })
+    })
+
+    const data = await response.json()
+
+    // If duplicate or error
+    if (!response.ok) {
+      alert(data.message)
+      return
+    }
+
+    // Success
+    alert('Progress report submitted successfully!')
+    navigate('/student')
+
+  } catch (err) {
+    alert('Could not connect to server. Please try again.')
+    console.error(err)
+  }
+
+}
+
+
 
   return(
      <div>
