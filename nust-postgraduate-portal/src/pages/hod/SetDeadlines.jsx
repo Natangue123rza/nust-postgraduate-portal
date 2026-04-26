@@ -1,5 +1,5 @@
 // src/pages/hod/SetDeadlines.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 function SetDeadlines() {
 
   const navigate = useNavigate()
-  const { setDeadlines: saveToContext } = useAuth()
+  const { user } = useAuth()
 
   // Deadline fields
   const [deadlines, setDeadlines] = useState({
@@ -23,19 +23,31 @@ function SetDeadlines() {
     thesis: ''
   })
 
-  // Track if saved
-  const [saved, setSaved] = useState(false)
+  // Fetch existing deadlines when page loads
+  useEffect(() => {
+    const fetchDeadlines = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/deadlines/all')
+        const data = await response.json()
+        if (response.ok) {
+          setSavedDeadlines(data)
+          setDeadlines(data)
+        }
+      } catch (err) {
+        console.error('Error fetching deadlines:', err)
+      }
+    }
+    fetchDeadlines()
+  }, [])
 
   // Calculate days and hours remaining
   const getTimeRemaining = (deadlineDate) => {
-
     if (!deadlineDate) return null
 
     const now = new Date()
     const deadline = new Date(deadlineDate)
     const difference = deadline - now
 
-    // Deadline has passed
     if (difference <= 0) {
       return { expired: true, text: '❌ Deadline has passed' }
     }
@@ -57,24 +69,45 @@ function SetDeadlines() {
       text: `⚠️ ${hours} hour${hours > 1 ? 's' : ''} and ${minutes} minute${minutes > 1 ? 's' : ''} remaining`,
       urgent: true
     }
-
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
 
     if (!deadlines.proposal && !deadlines.progressReport && !deadlines.thesis) {
       alert('Please set at least one deadline.')
       return
     }
 
-    setSavedDeadlines({ ...deadlines })
-    saveToContext({ ...deadlines })
-    setSaved(true)
-    alert('Deadlines saved successfully!')
+    try {
+
+      const response = await fetch('http://localhost:5000/api/deadlines/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proposal: deadlines.proposal,
+          progressReport: deadlines.progressReport,
+          thesis: deadlines.thesis,
+          hodId: user.id
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        alert(data.message)
+        return
+      }
+
+      setSavedDeadlines({ ...deadlines })
+      alert('Deadlines saved successfully!')
+
+    } catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    }
 
   }
 
-  // Deadline card component style
   const deadlineCardStyle = {
     backgroundColor: 'white',
     padding: '25px',
@@ -135,10 +168,9 @@ function SetDeadlines() {
           }}>
             📄 Research Proposal Deadline
           </h3>
-
           <input
             type="datetime-local"
-            value={deadlines.proposal}
+            value={deadlines.proposal || ''}
             onChange={(e) => setDeadlines({ ...deadlines, proposal: e.target.value })}
             style={{
               width: '100%',
@@ -149,8 +181,6 @@ function SetDeadlines() {
               marginBottom: '10px'
             }}
           />
-
-          {/* Time remaining */}
           {savedDeadlines.proposal && (
             <div style={{
               padding: '10px',
@@ -176,10 +206,9 @@ function SetDeadlines() {
           }}>
             📋 Progress Report Deadline
           </h3>
-
           <input
             type="datetime-local"
-            value={deadlines.progressReport}
+            value={deadlines.progressReport || ''}
             onChange={(e) => setDeadlines({ ...deadlines, progressReport: e.target.value })}
             style={{
               width: '100%',
@@ -190,8 +219,6 @@ function SetDeadlines() {
               marginBottom: '10px'
             }}
           />
-
-          {/* Time remaining */}
           {savedDeadlines.progressReport && (
             <div style={{
               padding: '10px',
@@ -217,10 +244,9 @@ function SetDeadlines() {
           }}>
             🎓 Thesis Submission Deadline
           </h3>
-
           <input
             type="datetime-local"
-            value={deadlines.thesis}
+            value={deadlines.thesis || ''}
             onChange={(e) => setDeadlines({ ...deadlines, thesis: e.target.value })}
             style={{
               width: '100%',
@@ -231,8 +257,6 @@ function SetDeadlines() {
               marginBottom: '10px'
             }}
           />
-
-          {/* Time remaining */}
           {savedDeadlines.thesis && (
             <div style={{
               padding: '10px',

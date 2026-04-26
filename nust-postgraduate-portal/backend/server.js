@@ -16,6 +16,7 @@ const periodRoutes = require('./routes/periods')
 const proposalRoutes = require('./routes/proposals')
 const thesisRoutes = require('./routes/theses')
 const evaluationRoutes = require('./routes/evaluations')
+const deadlineRoutes = require('./routes/deadlines')
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -24,6 +25,7 @@ app.use('/api/periods', periodRoutes)
 app.use('/api/proposals', proposalRoutes)
 app.use('/api/theses', thesisRoutes)
 app.use('/api/evaluations', evaluationRoutes)
+app.use('/api/deadlines', deadlineRoutes)
 
 // Test route
 app.get('/', (req, res) => {
