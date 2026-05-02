@@ -169,6 +169,27 @@ function StudentDashboard() {
             </p>
           </div>
 
+          {/* Results Card */}
+<div
+  onClick={() => navigate('/student/results')}
+  style={{
+    backgroundColor: 'white',
+    border: '1px solid #dddddd',
+    borderTop: '4px solid #8B0000',
+    padding: '25px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    width: '220px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+  }}>
+  <h3 style={{ color: '#8B0000', marginBottom: '10px' }}>
+    📊 My Results
+  </h3>
+  <p style={{ fontSize: '13px', color: '#666666' }}>
+    View your submission statuses and examination results
+  </p>
+</div>
+
         </div>
 
         {/* Deadlines Section - outside cards container */}
@@ -286,6 +307,7 @@ function StudentDashboard() {
                   </span>
                 </div>
               )}
+
 
             </div>
           </div>
