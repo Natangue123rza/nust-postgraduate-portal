@@ -1,69 +1,104 @@
 // src/pages/supervisor/ProgressReportReview.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
-import fakeUsers from '../../utils/fakeUsers'
 
 function ProgressReportReview() {
 
   const navigate = useNavigate()
 
-  // Get only students
-  const students = fakeUsers.filter(u => u.role === 'student')
-
-  // Track selected student
+  // Students and reports from database
+  const [students, setStudents] = useState([])
   const [selectedStudent, setSelectedStudent] = useState(null)
+  const [report, setReport] = useState(null)
+  const [loading, setLoading] = useState(false)
 
-  // Supervisor comment - Section 8
+  // Supervisor comment
   const [supervisorComment, setSupervisorComment] = useState('')
-
-  // Track if comment was saved
   const [saved, setSaved] = useState(false)
 
-  // Simulated progress report data
-  // In real system this comes from database
-  const simulatedReport = {
-    researchProblem: 'Investigating the impact of machine learning on healthcare data analysis in Namibia.',
-    objectives: '1. Review existing ML models\n2. Collect healthcare datasets\n3. Implement and test models\n4. Evaluate results',
-    activitiesCompleted: 'Completed literature review and identified 3 suitable ML models for testing.',
-    activitiesInProgress: 'Currently collecting datasets from local hospitals.',
-    activitiesOutstanding: 'Model implementation and testing still outstanding.',
-    onSchedule: 'yes',
-    onBudget: 'yes',
-    onTarget: 'no',
-    adjustments: 'Scope narrowed to focus on two hospitals instead of five.',
-    challenges: 'Difficulty obtaining ethical clearance from one hospital.',
-    risks: 'Data availability may affect final results.',
-    studentComments: 'Making steady progress despite challenges with data collection.',
-    submittedAt: '12/04/2026'
+  // Fetch students from database when page loads
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/students')
+        const data = await response.json()
+        setStudents(data)
+      } catch (err) {
+        console.error('Error fetching students:', err)
+      }
+    }
+    fetchStudents()
+  }, [])
+
+  // Fetch report when student is selected
+  const handleSelectStudent = async (student) => {
+    setSelectedStudent(student)
+    setSaved(false)
+    setSupervisorComment('')
+    setReport(null)
+    setLoading(true)
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/progress/student/${student.id}`)
+      const data = await response.json()
+
+      if (data.length > 0) {
+        setReport(data[0])
+        // If supervisor already commented, show it
+        if (data[0].supervisor_comments) {
+          setSupervisorComment(data[0].supervisor_comments)
+          setSaved(true)
+        }
+      } else {
+        setReport(null)
+      }
+    } catch (err) {
+      console.error('Error fetching report:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleSave = () => {
+  // Save supervisor comments to database
+  const handleSave = async () => {
 
     if (!supervisorComment) {
       alert('Please write your comments before saving.')
       return
     }
 
-    console.log('Supervisor comment saved:', {
-      student: selectedStudent.name,
-      comment: supervisorComment,
-      savedAt: new Date().toLocaleDateString()
-    })
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/progress/supervisor-comment/${report.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supervisorComments: supervisorComment })
+        }
+      )
 
-    setSaved(true)
+      const data = await response.json()
 
+      if (!response.ok) {
+        alert(data.message)
+        return
+      }
+
+      setSaved(true)
+      alert('Comments saved successfully!')
+
+    } catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    }
   }
 
   return (
     <div>
       <Navbar />
 
-      <div style={{
-        padding: '30px',
-        maxWidth: '900px',
-        margin: '0 auto'
-      }}>
+      <div style={{ padding: '30px', maxWidth: '900px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{
@@ -73,9 +108,7 @@ function ProgressReportReview() {
           borderRadius: '8px',
           marginBottom: '30px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>
-            Progress Report Review
-          </h1>
+          <h1 style={{ margin: 0, fontSize: '20px' }}>Progress Report Review</h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
             Review student progress reports and add supervisor comments
           </p>
@@ -117,11 +150,7 @@ function ProgressReportReview() {
           {students.map(student => (
             <div
               key={student.id}
-              onClick={() => {
-                setSelectedStudent(student)
-                setSaved(false)
-                setSupervisorComment('')
-              }}
+              onClick={() => handleSelectStudent(student)}
               style={{
                 backgroundColor: selectedStudent?.id === student.id ? '#002147' : 'white',
                 color: selectedStudent?.id === student.id ? 'white' : '#333333',
@@ -132,9 +161,7 @@ function ProgressReportReview() {
                 cursor: 'pointer',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
               }}>
-              <h3 style={{ marginBottom: '6px', fontSize: '14px' }}>
-                {student.name}
-              </h3>
+              <h3 style={{ marginBottom: '6px', fontSize: '14px' }}>{student.name}</h3>
               <span style={{
                 backgroundColor: student.degree === 'PhD' ? '#8B0000' : '#002147',
                 color: 'white',
@@ -148,8 +175,27 @@ function ProgressReportReview() {
           ))}
         </div>
 
-        {/* Show report when student selected */}
-        {selectedStudent && (
+        {/* Loading */}
+        {loading && (
+          <p style={{ color: '#666', textAlign: 'center' }}>Loading report...</p>
+        )}
+
+        {/* No report found */}
+        {selectedStudent && !loading && !report && (
+          <div style={{
+            backgroundColor: '#fff3e0',
+            border: '1px solid #ff9800',
+            padding: '20px',
+            borderRadius: '8px',
+            color: '#e65100',
+            fontSize: '14px'
+          }}>
+            ⚠️ {selectedStudent.name} has not submitted a progress report yet.
+          </div>
+        )}
+
+        {/* Show report when found */}
+        {selectedStudent && !loading && report && (
           <div>
 
             {/* Report header */}
@@ -163,7 +209,8 @@ function ProgressReportReview() {
             }}>
               <strong>Student:</strong> {selectedStudent.name} |
               <strong> Degree:</strong> {selectedStudent.degree} |
-              <strong> Submitted:</strong> {simulatedReport.submittedAt}
+              <strong> Semester:</strong> {report.semester} |
+              <strong> Submitted:</strong> {new Date(report.submitted_at).toLocaleDateString()}
             </div>
 
             {/* Section 1 */}
@@ -174,12 +221,8 @@ function ProgressReportReview() {
               marginBottom: '15px',
               boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
             }}>
-              <h4 style={{ color: '#8B0000', marginBottom: '8px' }}>
-                1. Research Problem
-              </h4>
-              <p style={{ fontSize: '14px', color: '#333' }}>
-                {simulatedReport.researchProblem}
-              </p>
+              <h4 style={{ color: '#8B0000', marginBottom: '8px' }}>1. Research Problem</h4>
+              <p style={{ fontSize: '14px', color: '#333' }}>{report.research_problem}</p>
             </div>
 
             {/* Section 2 */}
@@ -190,12 +233,8 @@ function ProgressReportReview() {
               marginBottom: '15px',
               boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
             }}>
-              <h4 style={{ color: '#8B0000', marginBottom: '8px' }}>
-                2. Research Objectives
-              </h4>
-              <p style={{ fontSize: '14px', color: '#333', whiteSpace: 'pre-line' }}>
-                {simulatedReport.objectives}
-              </p>
+              <h4 style={{ color: '#8B0000', marginBottom: '8px' }}>2. Research Objectives</h4>
+              <p style={{ fontSize: '14px', color: '#333', whiteSpace: 'pre-line' }}>{report.objectives}</p>
             </div>
 
             {/* Section 3 */}
@@ -206,41 +245,22 @@ function ProgressReportReview() {
               marginBottom: '15px',
               boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
             }}>
-              <h4 style={{ color: '#8B0000', marginBottom: '12px' }}>
-                3. Evaluation
-              </h4>
+              <h4 style={{ color: '#8B0000', marginBottom: '12px' }}>3. Evaluation</h4>
 
-              <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#002147' }}>
-                Activities Completed:
-              </p>
-              <p style={{ fontSize: '14px', color: '#333', marginBottom: '10px' }}>
-                {simulatedReport.activitiesCompleted}
-              </p>
+              <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#002147' }}>Activities Completed:</p>
+              <p style={{ fontSize: '14px', color: '#333', marginBottom: '10px' }}>{report.activities_completed}</p>
 
-              <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#002147' }}>
-                Activities In Progress:
-              </p>
-              <p style={{ fontSize: '14px', color: '#333', marginBottom: '10px' }}>
-                {simulatedReport.activitiesInProgress}
-              </p>
+              <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#002147' }}>Activities In Progress:</p>
+              <p style={{ fontSize: '14px', color: '#333', marginBottom: '10px' }}>{report.activities_in_progress}</p>
 
-              <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#002147' }}>
-                Activities Outstanding:
-              </p>
-              <p style={{ fontSize: '14px', color: '#333', marginBottom: '15px' }}>
-                {simulatedReport.activitiesOutstanding}
-              </p>
+              <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#002147' }}>Activities Outstanding:</p>
+              <p style={{ fontSize: '14px', color: '#333', marginBottom: '15px' }}>{report.activities_outstanding}</p>
 
-              {/* Status indicators */}
-              <div style={{
-                display: 'flex',
-                gap: '10px',
-                flexWrap: 'wrap'
-              }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 {[
-                  { label: 'On Schedule', value: simulatedReport.onSchedule },
-                  { label: 'On Budget', value: simulatedReport.onBudget },
-                  { label: 'On Target', value: simulatedReport.onTarget }
+                  { label: 'On Schedule', value: report.on_schedule },
+                  { label: 'On Budget', value: report.on_budget },
+                  { label: 'On Target', value: report.on_target }
                 ].map(item => (
                   <span key={item.label} style={{
                     backgroundColor: item.value === 'yes' ? '#e6f4ea' : '#fff3e0',
@@ -259,10 +279,10 @@ function ProgressReportReview() {
 
             {/* Sections 4-7 */}
             {[
-              { num: 4, title: 'Adjustments to Scope', value: simulatedReport.adjustments },
-              { num: 5, title: 'Challenges', value: simulatedReport.challenges },
-              { num: 6, title: 'Risks', value: simulatedReport.risks },
-              { num: 7, title: 'Student Comments', value: simulatedReport.studentComments }
+              { num: 4, title: 'Adjustments to Scope', value: report.adjustments },
+              { num: 5, title: 'Challenges', value: report.challenges },
+              { num: 6, title: 'Risks', value: report.risks },
+              { num: 7, title: 'Student Comments', value: report.student_comments }
             ].map(section => (
               <div key={section.num} style={{
                 backgroundColor: 'white',
@@ -274,9 +294,7 @@ function ProgressReportReview() {
                 <h4 style={{ color: '#8B0000', marginBottom: '8px' }}>
                   {section.num}. {section.title}
                 </h4>
-                <p style={{ fontSize: '14px', color: '#333' }}>
-                  {section.value}
-                </p>
+                <p style={{ fontSize: '14px', color: '#333' }}>{section.value}</p>
               </div>
             ))}
 
@@ -298,7 +316,6 @@ function ProgressReportReview() {
                 8. Supervisor Comments
               </h3>
 
-              {/* Show saved comment as read only */}
               {saved ? (
                 <div>
                   <div style={{
