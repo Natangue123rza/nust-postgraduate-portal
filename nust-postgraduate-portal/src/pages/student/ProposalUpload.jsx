@@ -31,19 +31,16 @@ function ProposalUpload() {
 
  const handleSubmit = async () => {
 
-  // Check title is filled
   if (!title) {
     alert('Please enter your research title.')
     return
   }
 
-  // Check description is filled
   if (!description) {
     alert('Please enter a brief description.')
     return
   }
 
-  // Check file is selected
   if (!file) {
     alert('Please upload your proposal PDF.')
     return
@@ -51,29 +48,41 @@ function ProposalUpload() {
 
   try {
 
-    // Send proposal to backend API
+    // Step 1 — Upload the file first
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const uploadResponse = await fetch('http://localhost:5000/api/uploads/file', {
+      method: 'POST',
+      body: formData
+    })
+
+    const uploadData = await uploadResponse.json()
+
+    if (!uploadResponse.ok) {
+      alert(uploadData.message)
+      return
+    }
+
+    // Step 2 — Submit proposal with saved filename
     const response = await fetch('http://localhost:5000/api/proposals/submit', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         studentId: user.id,
         title,
         description,
-        fileName: file.name
+        fileName: uploadData.fileName
       })
     })
 
     const data = await response.json()
 
-    // If duplicate or error
     if (!response.ok) {
       alert(data.message)
       return
     }
 
-    // Success
     setSubmitted(true)
 
   } catch (err) {

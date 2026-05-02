@@ -9,6 +9,9 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// Serve uploaded files statically
+app.use('/uploads', express.static('uploads'))
+
 // Import routes
 const authRoutes = require('./routes/auth')
 const progressRoutes = require('./routes/progress')
@@ -17,6 +20,7 @@ const proposalRoutes = require('./routes/proposals')
 const thesisRoutes = require('./routes/theses')
 const evaluationRoutes = require('./routes/evaluations')
 const deadlineRoutes = require('./routes/deadlines')
+const uploadRoutes = require('./routes/uploads')
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -26,6 +30,7 @@ app.use('/api/proposals', proposalRoutes)
 app.use('/api/theses', thesisRoutes)
 app.use('/api/evaluations', evaluationRoutes)
 app.use('/api/deadlines', deadlineRoutes)
+app.use('/api/uploads', uploadRoutes)
 
 // Test route
 app.get('/', (req, res) => {

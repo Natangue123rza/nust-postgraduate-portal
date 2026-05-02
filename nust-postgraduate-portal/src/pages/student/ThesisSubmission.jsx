@@ -30,27 +30,23 @@ function ThesisSubmission() {
     setFile(selectedFile)
   }
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
 
-  // Check title is filled
   if (!title) {
     alert('Please enter your thesis title.')
     return
   }
 
-  // Check abstract is filled
   if (!abstract) {
     alert('Please enter your thesis abstract.')
     return
   }
 
-  // Check file is selected
   if (!file) {
     alert('Please upload your thesis PDF.')
     return
   }
 
-  // Check declaration is checked
   if (!declaration) {
     alert('Please confirm the declaration before submitting.')
     return
@@ -58,29 +54,41 @@ function ThesisSubmission() {
 
   try {
 
-    // Send thesis to backend API
+    // Step 1 — Upload the file first
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const uploadResponse = await fetch('http://localhost:5000/api/uploads/file', {
+      method: 'POST',
+      body: formData
+    })
+
+    const uploadData = await uploadResponse.json()
+
+    if (!uploadResponse.ok) {
+      alert(uploadData.message)
+      return
+    }
+
+    // Step 2 — Submit thesis with saved filename
     const response = await fetch('http://localhost:5000/api/theses/submit', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         studentId: user.id,
         title,
         abstract,
-        fileName: file.name
+        fileName: uploadData.fileName
       })
     })
 
     const data = await response.json()
 
-    // If duplicate or error
     if (!response.ok) {
       alert(data.message)
       return
     }
 
-    // Success
     setSubmitted(true)
 
   } catch (err) {
