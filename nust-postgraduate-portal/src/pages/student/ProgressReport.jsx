@@ -46,11 +46,18 @@ useEffect(() => {
 
  const handleSubmit = async () => {
 
+
   // Check required fields
   if (!researchProblem || !objectives || !activitiesCompleted) {
     alert('Please fill in all required fields before submitting.')
     return
   }
+
+  // Check active semester is loaded
+if (!activeSemester) {
+  alert('Could not load active semester. Please refresh the page.')
+  return
+}
 
   try {
 

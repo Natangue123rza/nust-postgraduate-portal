@@ -31,6 +31,30 @@ router.post('/submit', async (req, res) => {
       [studentId, title, description, fileName]
     )
 
+    // Get student name
+const [studentRows] = await poolPromise.query(
+  'SELECT name FROM users WHERE id = ?',
+  [studentId]
+)
+const studentName = studentRows[0].name
+
+    // Get all HOD users to notify
+const [hods] = await poolPromise.query(
+  "SELECT id FROM users WHERE role = 'hod'"
+)
+
+// Create notification for each HOD
+for (const hod of hods) {
+  await poolPromise.query(
+    'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+    [
+      hod.id,
+      'New Proposal Submitted',
+     `${studentName} has submitted a research proposal titled "${title}". Please review and record the HDC decision.`
+    ]
+  )
+}
+
     res.json({ message: 'Proposal submitted successfully!' })
 
   } catch (err) {

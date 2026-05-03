@@ -54,6 +54,28 @@ router.post('/submit', async (req, res) => {
         risks, studentComments
       ]
     )
+    // Get student name
+const [studentRows] = await poolPromise.query(
+  'SELECT name FROM users WHERE id = ?',
+  [studentId]
+)
+const studentName = studentRows[0].name
+    // Get supervisor to notify
+const [supervisors] = await poolPromise.query(
+  "SELECT id FROM users WHERE role = 'supervisor'"
+)
+
+// Create notification for each supervisor
+for (const supervisor of supervisors) {
+  await poolPromise.query(
+    'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+    [
+      supervisor.id,
+      'New Progress Report',
+      `${studentName} has submitted a progress report for ${semester}. Please review and add your comments.`
+    ]
+  )
+}
 
     res.json({ message: 'Progress report submitted successfully!' })
 

@@ -55,6 +55,16 @@ router.post('/submit', async (req, res) => {
       ]
     )
 
+    // Notify the student
+await poolPromise.query(
+  'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+  [
+    studentId,
+    'Thesis Evaluated',
+    `Your thesis has been evaluated by an examiner. Log in to view your results and final mark.`
+  ]
+)
+
     // Check if we can calculate final mark
     // Get student degree
     const [studentRows] = await poolPromise.query(
