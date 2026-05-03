@@ -6,63 +6,67 @@ import { useAuth } from '../../context/AuthContext'
 
 function EvaluationForm() {
 
- const navigate = useNavigate()
-const { user } = useAuth()
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
-// Students fetched from database
-const [students, setStudents] = useState([])
-
-// Fetch students when page loads
-useEffect(() => {
-  const fetchStudents = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/students')
-      const data = await response.json()
-      if (response.ok) {
-        setStudents(data)
-      }
-    } catch (err) {
-      console.error('Error fetching students:', err)
-    }
-  }
-  fetchStudents()
-}, [])
-
-  // Track selected student
+  const [students, setStudents] = useState([])
   const [selectedStudent, setSelectedStudent] = useState(null)
-
-  // Section marks - each starts at 0
+  const [existingEvaluation, setExistingEvaluation] = useState(null)
   const [sectionA, setSectionA] = useState('')
   const [sectionB, setSectionB] = useState('')
   const [sectionC, setSectionC] = useState('')
   const [sectionD, setSectionD] = useState('')
   const [sectionE, setSectionE] = useState('')
-
-  // Comments for each section
   const [commentA, setCommentA] = useState('')
   const [commentB, setCommentB] = useState('')
   const [commentC, setCommentC] = useState('')
   const [commentD, setCommentD] = useState('')
   const [commentE, setCommentE] = useState('')
-
-  // Overall assessment text (Part A of form)
   const [overallAssessment, setOverallAssessment] = useState('')
-
-  // Recommendation (Part C of form)
   const [recommendation, setRecommendation] = useState('')
-
-  // Track submission
   const [submitted, setSubmitted] = useState(false)
 
-  // Calculate total marks
-  const totalMarks = 
+  // Fetch students from database
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/students')
+        const data = await response.json()
+        if (response.ok) setStudents(data)
+      } catch (err) {
+        console.error('Error fetching students:', err)
+      }
+    }
+    fetchStudents()
+  }, [])
+
+  // Check if examiner already evaluated selected student
+  useEffect(() => {
+    if (!selectedStudent) return
+
+    const checkExisting = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/evaluations/student/${selectedStudent.id}`
+        )
+        const data = await response.json()
+        const myEvaluation = data.find(e => e.examiner_id === user.id)
+        setExistingEvaluation(myEvaluation || null)
+      } catch (err) {
+        console.error('Error checking evaluation:', err)
+      }
+    }
+
+    checkExisting()
+  }, [selectedStudent, user.id])
+
+  const totalMarks =
     (Number(sectionA) || 0) +
     (Number(sectionB) || 0) +
     (Number(sectionC) || 0) +
     (Number(sectionD) || 0) +
     (Number(sectionE) || 0)
 
-  // Validate each section is within allowed range
   const validateMarks = () => {
     if (sectionA < 0 || sectionA > 20) return 'Section A must be between 0 and 20'
     if (sectionB < 0 || sectionB > 30) return 'Section B must be between 0 and 30'
@@ -74,93 +78,51 @@ useEffect(() => {
 
   const handleSubmit = async () => {
 
-  // Check student is selected
-  if (!selectedStudent) {
-    alert('Please select a student to evaluate.')
-    return
-  }
-
-  // Check overall assessment is filled
-  if (!overallAssessment) {
-    alert('Please write an overall assessment.')
-    return
-  }
-
-  // Check all sections are filled
-  if (!sectionA || !sectionB || !sectionC || !sectionD || !sectionE) {
-    alert('Please fill in marks for all sections.')
-    return
-  }
-
-  // Validate mark ranges
-  const error = validateMarks()
-  if (error) {
-    alert(error)
-    return
-  }
-
-  // Check recommendation is selected
-  if (!recommendation) {
-    alert('Please select a recommendation.')
-    return
-  }
-
-  try {
-
-    // Send evaluation to backend API
-    const response = await fetch('http://localhost:5000/api/evaluations/submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        studentId: selectedStudent.id,
-        examinerId: user.id,
-        examinerType: 'internal',
-        sectionA: Number(sectionA),
-        sectionB: Number(sectionB),
-        sectionC: Number(sectionC),
-        sectionD: Number(sectionD),
-        sectionE: Number(sectionE),
-        totalMark: totalMarks,
-        overallAssessment,
-        recommendation,
-        commentA,
-        commentB,
-        commentC,
-        commentD,
-        commentE
-      })
-    })
-
-    const data = await response.json()
-
-    // If duplicate or error
-    if (!response.ok) {
-      alert(data.message)
-      return
+    if (!selectedStudent) { alert('Please select a student.'); return }
+    if (!overallAssessment) { alert('Please write an overall assessment.'); return }
+    if (!sectionA || !sectionB || !sectionC || !sectionD || !sectionE) {
+      alert('Please fill in marks for all sections.'); return
     }
+    const error = validateMarks()
+    if (error) { alert(error); return }
+    if (!recommendation) { alert('Please select a recommendation.'); return }
 
-    // Show final mark message
-    console.log(data.finalMarkMessage)
-    setSubmitted(true)
+    try {
+      const response = await fetch('http://localhost:5000/api/evaluations/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          examinerId: user.id,
+          examinerType: 'internal',
+          sectionA: Number(sectionA),
+          sectionB: Number(sectionB),
+          sectionC: Number(sectionC),
+          sectionD: Number(sectionD),
+          sectionE: Number(sectionE),
+          totalMark: totalMarks,
+          overallAssessment,
+          recommendation,
+          commentA, commentB, commentC, commentD, commentE
+        })
+      })
 
-  } catch (err) {
-    alert('Could not connect to server. Please try again.')
-    console.error(err)
+      const data = await response.json()
+      if (!response.ok) { alert(data.message); return }
+      console.log(data.finalMarkMessage)
+      setSubmitted(true)
+
+    } catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    }
   }
-
-}
 
   return (
     <div>
       <Navbar />
 
-      <div style={{
-        padding: '30px',
-        maxWidth: '800px',
-        margin: '0 auto'
-      }}>
+      <div style={{ padding: '30px', maxWidth: '800px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{
@@ -170,9 +132,7 @@ useEffect(() => {
           borderRadius: '8px',
           marginBottom: '30px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>
-            Examiner's Report Form
-          </h1>
+          <h1 style={{ margin: 0, fontSize: '20px' }}>Examiner's Report Form</h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
             Faculty of Computing and Informatics — Thesis Assessment
           </p>
@@ -188,7 +148,8 @@ useEffect(() => {
             padding: '8px 16px',
             borderRadius: '4px',
             marginBottom: '25px',
-            fontSize: '13px'
+            fontSize: '13px',
+            cursor: 'pointer'
           }}>
           ← Back to Dashboard
         </button>
@@ -213,7 +174,11 @@ useEffect(() => {
           {students.map(student => (
             <div
               key={student.id}
-              onClick={() => setSelectedStudent(student)}
+              onClick={() => {
+                setSelectedStudent(student)
+                setExistingEvaluation(null)
+                setSubmitted(false)
+              }}
               style={{
                 backgroundColor: selectedStudent?.id === student.id ? '#002147' : 'white',
                 color: selectedStudent?.id === student.id ? 'white' : '#333333',
@@ -224,9 +189,7 @@ useEffect(() => {
                 cursor: 'pointer',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
               }}>
-              <h3 style={{ marginBottom: '6px', fontSize: '14px' }}>
-                {student.name}
-              </h3>
+              <h3 style={{ marginBottom: '6px', fontSize: '14px' }}>{student.name}</h3>
               <span style={{
                 backgroundColor: student.degree === 'PhD' ? '#8B0000' : '#002147',
                 color: 'white',
@@ -240,11 +203,68 @@ useEffect(() => {
           ))}
         </div>
 
-        {/* Show form only when student is selected */}
-        {selectedStudent && !submitted && (
+        {/* Show read only if already evaluated */}
+        {selectedStudent && existingEvaluation && !submitted && (
+          <div style={{
+            backgroundColor: '#f0f7ff',
+            border: '2px solid #002147',
+            padding: '25px',
+            borderRadius: '8px',
+            marginBottom: '20px'
+          }}>
+            <h3 style={{ color: '#002147', marginBottom: '15px' }}>
+              ✅ You have already evaluated {selectedStudent.name}
+            </h3>
+            <p style={{ fontSize: '13px', color: '#666', marginBottom: '15px' }}>
+              Submitted on: {new Date(existingEvaluation.submitted_at).toLocaleDateString()}
+            </p>
+
+            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px' }}>
+              <h4 style={{ color: '#8B0000', marginBottom: '15px' }}>Submitted Marks:</h4>
+              {[
+                { label: 'Section A — Intellectual Merit', mark: existingEvaluation.section_a, max: 20 },
+                { label: 'Section B — Scientific Merit', mark: existingEvaluation.section_b, max: 30 },
+                { label: 'Section C — Quality of Results', mark: existingEvaluation.section_c, max: 20 },
+                { label: 'Section D — Presentation', mark: existingEvaluation.section_d, max: 20 },
+                { label: 'Section E — Creativity', mark: existingEvaluation.section_e, max: 10 }
+              ].map(s => (
+                <div key={s.label} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '8px 0',
+                  borderBottom: '1px solid #f0f0f0',
+                  fontSize: '14px'
+                }}>
+                  <span style={{ color: '#333' }}>{s.label}</span>
+                  <span style={{ fontWeight: 'bold', color: '#002147' }}>
+                    {s.mark}/{s.max}
+                  </span>
+                </div>
+              ))}
+
+              <div style={{
+                backgroundColor: '#002147',
+                color: 'white',
+                padding: '12px 15px',
+                borderRadius: '6px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: '15px'
+              }}>
+                <span style={{ fontWeight: 'bold' }}>Total Mark:</span>
+                <span style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                  {existingEvaluation.total_mark}/100
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show form only when student selected AND not already evaluated */}
+        {selectedStudent && !existingEvaluation && !submitted && (
           <div>
 
-            {/* Part A - Overall Assessment */}
+            {/* Part A */}
             <div style={{
               backgroundColor: 'white',
               padding: '25px',
@@ -260,9 +280,6 @@ useEffect(() => {
               }}>
                 Part A: Overall Assessment Report
               </h3>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
-                Write an overall assessment of the work (maximum 2 pages)
-              </p>
               <textarea
                 value={overallAssessment}
                 onChange={(e) => setOverallAssessment(e.target.value)}
@@ -279,7 +296,7 @@ useEffect(() => {
               />
             </div>
 
-            {/* Part B - Marks */}
+            {/* Part B */}
             <div style={{
               backgroundColor: 'white',
               padding: '25px',
@@ -296,210 +313,53 @@ useEffect(() => {
                 Part B: Allocation of Marks
               </h3>
 
-              {/* Section A */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  fontWeight: 'bold',
-                  color: '#002147',
-                  display: 'block',
-                  marginBottom: '6px'
-                }}>
-                  Section A: Intellectual Merit (0 - 20 marks)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={sectionA}
-                  onChange={(e) => setSectionA(e.target.value)}
-                  style={{
-                    width: '100px',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    marginBottom: '8px'
-                  }}
-                />
-                <textarea
-                  value={commentA}
-                  onChange={(e) => setCommentA(e.target.value)}
-                  placeholder="Comments on Section A..."
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              {/* Section B */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  fontWeight: 'bold',
-                  color: '#002147',
-                  display: 'block',
-                  marginBottom: '6px'
-                }}>
-                  Section B: Scientific Merit (0 - 30 marks)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="30"
-                  value={sectionB}
-                  onChange={(e) => setSectionB(e.target.value)}
-                  style={{
-                    width: '100px',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    marginBottom: '8px'
-                  }}
-                />
-                <textarea
-                  value={commentB}
-                  onChange={(e) => setCommentB(e.target.value)}
-                  placeholder="Comments on Section B..."
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              {/* Section C */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  fontWeight: 'bold',
-                  color: '#002147',
-                  display: 'block',
-                  marginBottom: '6px'
-                }}>
-                  Section C: Quality of Results (0 - 20 marks)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={sectionC}
-                  onChange={(e) => setSectionC(e.target.value)}
-                  style={{
-                    width: '100px',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    marginBottom: '8px'
-                  }}
-                />
-                <textarea
-                  value={commentC}
-                  onChange={(e) => setCommentC(e.target.value)}
-                  placeholder="Comments on Section C..."
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              {/* Section D */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  fontWeight: 'bold',
-                  color: '#002147',
-                  display: 'block',
-                  marginBottom: '6px'
-                }}>
-                  Section D: Presentation & Structure (0 - 20 marks)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={sectionD}
-                  onChange={(e) => setSectionD(e.target.value)}
-                  style={{
-                    width: '100px',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    marginBottom: '8px'
-                  }}
-                />
-                <textarea
-                  value={commentD}
-                  onChange={(e) => setCommentD(e.target.value)}
-                  placeholder="Comments on Section D..."
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              {/* Section E */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  fontWeight: 'bold',
-                  color: '#002147',
-                  display: 'block',
-                  marginBottom: '6px'
-                }}>
-                  Section E: Student Creativity (0 - 10 marks)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  value={sectionE}
-                  onChange={(e) => setSectionE(e.target.value)}
-                  style={{
-                    width: '100px',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    marginBottom: '8px'
-                  }}
-                />
-                <textarea
-                  value={commentE}
-                  onChange={(e) => setCommentE(e.target.value)}
-                  placeholder="Comments on Section E..."
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
+              {[
+                { label: 'Section A: Intellectual Merit', max: 20, value: sectionA, setter: setSectionA, comment: commentA, commentSetter: setCommentA, placeholder: 'Comments on Section A...' },
+                { label: 'Section B: Scientific Merit', max: 30, value: sectionB, setter: setSectionB, comment: commentB, commentSetter: setCommentB, placeholder: 'Comments on Section B...' },
+                { label: 'Section C: Quality of Results', max: 20, value: sectionC, setter: setSectionC, comment: commentC, commentSetter: setCommentC, placeholder: 'Comments on Section C...' },
+                { label: 'Section D: Presentation & Structure', max: 20, value: sectionD, setter: setSectionD, comment: commentD, commentSetter: setCommentD, placeholder: 'Comments on Section D...' },
+                { label: 'Section E: Student Creativity', max: 10, value: sectionE, setter: setSectionE, comment: commentE, commentSetter: setCommentE, placeholder: 'Comments on Section E...' }
+              ].map(section => (
+                <div key={section.label} style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    fontWeight: 'bold',
+                    color: '#002147',
+                    display: 'block',
+                    marginBottom: '6px'
+                  }}>
+                    {section.label} (0 - {section.max} marks)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={section.max}
+                    value={section.value}
+                    onChange={(e) => section.setter(e.target.value)}
+                    style={{
+                      width: '100px',
+                      padding: '8px',
+                      border: '1px solid #cccccc',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      marginBottom: '8px'
+                    }}
+                  />
+                  <textarea
+                    value={section.comment}
+                    onChange={(e) => section.commentSetter(e.target.value)}
+                    placeholder={section.placeholder}
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid #cccccc',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+              ))}
 
               {/* Live total */}
               <div style={{
@@ -516,10 +376,9 @@ useEffect(() => {
                   {totalMarks} / 100
                 </span>
               </div>
-
             </div>
 
-            {/* Part C - Recommendation */}
+            {/* Part C */}
             <div style={{
               backgroundColor: 'white',
               padding: '25px',
@@ -536,7 +395,7 @@ useEffect(() => {
                 Part C: Recommendation
               </h3>
 
-              {['a', 'b', 'c', 'd'].map((opt, index) => (
+              {['a', 'b', 'c', 'd'].map(opt => (
                 <label key={opt} style={{
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -574,7 +433,8 @@ useEffect(() => {
                 borderRadius: '4px',
                 fontSize: '16px',
                 fontWeight: 'bold',
-                marginBottom: '30px'
+                marginBottom: '30px',
+                cursor: 'pointer'
               }}>
               Submit Evaluation
             </button>
@@ -582,7 +442,7 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Success message after submission */}
+        {/* Success message */}
         {submitted && (
           <div style={{
             backgroundColor: '#e6f4ea',
@@ -596,9 +456,6 @@ useEffect(() => {
             </h2>
             <p style={{ color: '#333', marginBottom: '5px' }}>
               Student: <strong>{selectedStudent?.name}</strong>
-            </p>
-            <p style={{ color: '#333', marginBottom: '5px' }}>
-              Degree: <strong>{selectedStudent?.degree}</strong>
             </p>
             <p style={{ color: '#333', marginBottom: '20px' }}>
               Total Mark: <strong>{totalMarks} / 100</strong>
