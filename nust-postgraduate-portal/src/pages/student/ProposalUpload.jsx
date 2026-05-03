@@ -1,8 +1,8 @@
 // src/pages/student/ProposalUpload.jsx
-import { useState } from 'react'
 import Navbar from '../../components/Navbar'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 
 function ProposalUpload() {
 
@@ -14,6 +14,24 @@ function ProposalUpload() {
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  const [deadlinePassed, setDeadlinePassed] = useState(false)
+
+  useEffect(() => {
+  const fetchDeadline = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/deadlines/all')
+      const data = await response.json()
+      if (data.proposal) {
+        const deadline = new Date(data.proposal)
+        const now = new Date()
+        setDeadlinePassed(now > deadline)
+      }
+    } catch (err) {
+      console.error('Error fetching deadline:', err)
+    }
+  }
+  fetchDeadline()
+}, [])
 
   // Handle file selection
   const handleFileChange = (e) => {
@@ -31,6 +49,8 @@ function ProposalUpload() {
 
  const handleSubmit = async () => {
 
+   
+
   if (!title) {
     alert('Please enter your research title.')
     return
@@ -43,6 +63,12 @@ function ProposalUpload() {
 
   if (!file) {
     alert('Please upload your proposal PDF.')
+    return
+  }
+
+  // Block submission if deadline passed
+  if (deadlinePassed) {
+    alert('The submission deadline has passed. You can no longer submit.')
     return
   }
 
@@ -302,19 +328,24 @@ function ProposalUpload() {
             <p style={{ color: '#333', marginBottom: '20px' }}>
               Status: <strong>Pending HDC Review</strong>
             </p>
-            <button
-              onClick={() => navigate('/student')}
-              style={{
-                backgroundColor: '#002147',
-                color: 'white',
-                border: 'none',
-                padding: '10px 25px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                cursor: 'pointer'
-              }}>
-              Back to Dashboard
-            </button>
+      {/* Submit button - disabled if deadline passed */}
+<button
+  onClick={handleSubmit}
+  disabled={deadlinePassed}
+  style={{
+    width: '100%',
+    padding: '14px',
+    backgroundColor: deadlinePassed ? '#cccccc' : '#002147',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    marginBottom: '30px',
+    cursor: deadlinePassed ? 'not-allowed' : 'pointer'
+  }}>
+  {deadlinePassed ? '❌ Submission Deadline Has Passed' : 'Submit Research Proposal'}
+</button>
           </div>
         )}
 

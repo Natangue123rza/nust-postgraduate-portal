@@ -27,6 +27,7 @@ function ProgressReport() {
   const [studentComments, setStudentComments] = useState('')
   // Active semester from database
 const [activeSemester, setActiveSemester] = useState('')
+const [deadlinePassed, setDeadlinePassed] = useState(false)
 
 // Fetch active semester when page loads
 useEffect(() => {
@@ -41,7 +42,23 @@ useEffect(() => {
       console.error('Error fetching period:', err)
     }
   }
+
+  const fetchDeadline = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/deadlines/all')
+      const data = await response.json()
+      if (data.progressReport) {
+        const deadline = new Date(data.progressReport)
+        const now = new Date()
+        setDeadlinePassed(now > deadline)
+      }
+    } catch (err) {
+      console.error('Error fetching deadline:', err)
+    }
+  }
+
   fetchActivePeriod()
+  fetchDeadline()
 }, [])
 
  const handleSubmit = async () => {
@@ -58,6 +75,12 @@ if (!activeSemester) {
   alert('Could not load active semester. Please refresh the page.')
   return
 }
+
+// Block submission if deadline passed
+  if (deadlinePassed) {
+    alert('The submission deadline has passed. You can no longer submit.')
+    return
+  }
 
   try {
 
@@ -484,22 +507,23 @@ if (!activeSemester) {
   />
 </div>
 
-{/* Submit Button */}
+{/* Submit button - disabled if deadline passed */}
 <button
   onClick={handleSubmit}
+  disabled={deadlinePassed}
   style={{
     width: '100%',
     padding: '14px',
-    backgroundColor: '#002147',
+    backgroundColor: deadlinePassed ? '#cccccc' : '#002147',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
     fontSize: '16px',
     fontWeight: 'bold',
     marginBottom: '30px',
-    cursor:"pointer"
+    cursor: deadlinePassed ? 'not-allowed' : 'pointer'
   }}>
-  Submit Progress Report
+  {deadlinePassed ? '❌ Submission Deadline Has Passed' : 'Submit Progress Report'}
 </button>
 
         </div>
