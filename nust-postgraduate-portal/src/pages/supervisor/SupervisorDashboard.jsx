@@ -97,6 +97,47 @@ function SupervisorDashboard() {
             </p>
           </div>
 
+{/* View Proposals Card */}
+<div
+  onClick={() => navigate('/supervisor/proposals')}
+  style={{
+    backgroundColor: 'white',
+    border: '1px solid #dddddd',
+    borderTop: '4px solid #002147',
+    padding: '25px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    width: '220px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+  }}>
+  <h3 style={{ color: '#002147', marginBottom: '10px' }}>
+    📄 Research Proposals
+  </h3>
+  <p style={{ fontSize: '13px', color: '#666666' }}>
+    View student research proposals
+  </p>
+</div>
+
+{/* View Theses Card */}
+<div
+  onClick={() => navigate('/supervisor/theses')}
+  style={{
+    backgroundColor: 'white',
+    border: '1px solid #dddddd',
+    borderTop: '4px solid #002147',
+    padding: '25px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    width: '220px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+  }}>
+  <h3 style={{ color: '#002147', marginBottom: '10px' }}>
+    🎓 Thesis Submissions
+  </h3>
+  <p style={{ fontSize: '13px', color: '#666666' }}>
+    View student thesis submissions
+  </p>
+</div>
         </div>
       </div>
     </div>

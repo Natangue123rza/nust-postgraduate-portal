@@ -27,6 +27,8 @@ import HDCDecision from './pages/hod/HDCDecision'
 import SetDeadlines from './pages/hod/SetDeadlines'
 import SetAcademicPeriod from './pages/hod/SetAcademicPeriod'
 import Results from './pages/student/Results'
+import ViewProposals from './pages/supervisor/ViewProposals'
+import ViewTheses from './pages/supervisor/ViewTheses'
 
 
 
@@ -151,6 +153,20 @@ function App() {
 <Route path="/student/results" element={
   <ProtectedRoute allowedRoles={['student']}>
     <Results />
+  </ProtectedRoute>
+} />
+
+{/* Supervisor View Proposals */}
+<Route path="/supervisor/proposals" element={
+  <ProtectedRoute allowedRoles={['supervisor']}>
+    <ViewProposals />
+  </ProtectedRoute>
+} />
+
+{/* Supervisor View Theses */}
+<Route path="/supervisor/theses" element={
+  <ProtectedRoute allowedRoles={['supervisor']}>
+    <ViewTheses />
   </ProtectedRoute>
 } />
 
