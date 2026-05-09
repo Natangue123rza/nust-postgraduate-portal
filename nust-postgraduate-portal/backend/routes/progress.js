@@ -39,6 +39,46 @@ router.post('/submit', async (req, res) => {
       })
     }
 
+      // Auto calculate on_schedule
+// Check if submitted before the progress report deadline
+let onSchedule = 'no'
+let onTarget = 'no'
+
+// Check deadline
+const [deadlineRows] = await poolPromise.query(
+  "SELECT deadline_date FROM deadlines WHERE deadline_type = 'progressReport'"
+)
+
+if (deadlineRows.length > 0) {
+  const deadline = new Date(deadlineRows[0].deadline_date)
+  const now = new Date()
+  onSchedule = now <= deadline ? 'yes' : 'no'
+} else {
+  // No deadline set - assume on schedule
+  onSchedule = 'yes'
+}
+
+// Check on target - did supervisor review previous report?
+const [previousReports] = await poolPromise.query(
+  `SELECT * FROM progress_reports 
+   WHERE student_id = ? 
+   AND supervisor_comments IS NOT NULL 
+   AND supervisor_comments != ''`,
+  [studentId]
+)
+
+onTarget = previousReports.length > 0 ? 'yes' : 'no'
+    // Get student name
+const [studentRows] = await poolPromise.query(
+  'SELECT name FROM users WHERE id = ?',
+  [studentId]
+)
+const studentName = studentRows[0].name
+    // Get supervisor to notify
+const [supervisors] = await poolPromise.query(
+  "SELECT id FROM users WHERE role = 'supervisor'"
+)
+
     // Insert new report into database
     await poolPromise.query(
       `INSERT INTO progress_reports 
@@ -54,16 +94,7 @@ router.post('/submit', async (req, res) => {
         risks, studentComments
       ]
     )
-    // Get student name
-const [studentRows] = await poolPromise.query(
-  'SELECT name FROM users WHERE id = ?',
-  [studentId]
-)
-const studentName = studentRows[0].name
-    // Get supervisor to notify
-const [supervisors] = await poolPromise.query(
-  "SELECT id FROM users WHERE role = 'supervisor'"
-)
+  
 
 // Create notification for each supervisor
 for (const supervisor of supervisors) {

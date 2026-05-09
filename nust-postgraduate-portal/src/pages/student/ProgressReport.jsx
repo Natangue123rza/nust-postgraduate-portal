@@ -13,19 +13,16 @@ function ProgressReport() {
 
  // Each section of the form gets its own state variable
 
-  const [researchProblem, setResearchProblem] = useState('')
-  const [objectives, setObjectives] = useState('')
-  const [activitiesCompleted, setActivitiesCompleted] = useState('')
-  const [activitiesInProgress, setActivitiesInProgress] = useState('')
-  const [activitiesOutstanding, setActivitiesOutstanding] = useState('')
-  const [onSchedule, setOnSchedule] = useState('yes')
-  const [onBudget, setOnBudget] = useState('yes')
-  const [onTarget, setOnTarget] = useState('yes')
-  const [adjustments, setAdjustments] = useState('')
-  const [challenges, setChallenges] = useState('')
-  const [risks, setRisks] = useState('')
-  const [studentComments, setStudentComments] = useState('')
-  // Active semester from database
+const [researchProblem, setResearchProblem] = useState('')
+const [objectives, setObjectives] = useState('')
+const [activitiesCompleted, setActivitiesCompleted] = useState('')
+const [activitiesInProgress, setActivitiesInProgress] = useState('')
+const [activitiesOutstanding, setActivitiesOutstanding] = useState('')
+const [onBudget, setOnBudget] = useState('yes')  // ✅ keep only this
+const [adjustments, setAdjustments] = useState('')
+const [challenges, setChallenges] = useState('')
+const [risks, setRisks] = useState('')
+const [studentComments, setStudentComments] = useState('')
 const [activeSemester, setActiveSemester] = useState('')
 const [deadlinePassed, setDeadlinePassed] = useState(false)
 
@@ -98,9 +95,7 @@ if (!activeSemester) {
         activitiesCompleted,
         activitiesInProgress,
         activitiesOutstanding,
-        onSchedule,
         onBudget,
-        onTarget,
         adjustments,
         challenges,
         risks,
@@ -235,6 +230,8 @@ if (!activeSemester) {
           />
 
           {/* SECTION 3 - Evaluation */}
+       
+
 <div style={{
   backgroundColor: 'white',
   padding: '25px',
@@ -250,6 +247,20 @@ if (!activeSemester) {
   }}>
     3. Evaluation
   </h3>
+     <div style={{
+  backgroundColor: '#f0f7ff',
+  border: '1px solid #002147',
+  padding: '10px 15px',
+  borderRadius: '4px',
+   marginTop:'20px',
+  marginBottom: '15px',
+  fontSize: '13px',
+  color: '#002147'
+}}>
+  ℹ️ <strong>On Schedule</strong> and <strong>On Target</strong> status are 
+  calculated automatically by the system based on your submission date and 
+  supervisor review history.
+</div>
 
   {/* Activities Completed */}
   <label style={{ fontWeight: 'bold', color: '#002147', display: 'block', marginBottom: '6px' }}>
@@ -277,25 +288,7 @@ if (!activeSemester) {
   </label>
 
   {/* On Schedule */}
-  <div style={{ marginBottom: '8px' }}>
-    <span style={{ marginRight: '15px', fontSize: '14px' }}>On Schedule?</span>
-    <label style={{ marginRight: '10px' }}>
-      <input
-        type="radio"
-        value="yes"
-        checked={onSchedule === 'yes'}
-        onChange={(e) => setOnSchedule(e.target.value)}
-      /> Yes
-    </label>
-    <label>
-      <input
-        type="radio"
-        value="no"
-        checked={onSchedule === 'no'}
-        onChange={(e) => setOnSchedule(e.target.value)}
-      /> No
-    </label>
-  </div>
+
 
   {/* On Budget */}
   <div style={{ marginBottom: '8px' }}>
@@ -319,25 +312,7 @@ if (!activeSemester) {
   </div>
 
   {/* On Target */}
-  <div style={{ marginBottom: '15px' }}>
-    <span style={{ marginRight: '15px', fontSize: '14px' }}>On Target?</span>
-    <label style={{ marginRight: '10px' }}>
-      <input
-        type="radio"
-        value="yes"
-        checked={onTarget === 'yes'}
-        onChange={(e) => setOnTarget(e.target.value)}
-      /> Yes
-    </label>
-    <label>
-      <input
-        type="radio"
-        value="no"
-        checked={onTarget === 'no'}
-        onChange={(e) => setOnTarget(e.target.value)}
-      /> No
-    </label>
-  </div>
+  
 
   {/* Activities in Progress */}
   <label style={{ fontWeight: 'bold', color: '#002147', display: 'block', marginBottom: '6px' }}>
