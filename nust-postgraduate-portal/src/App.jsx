@@ -29,6 +29,7 @@ import SetAcademicPeriod from './pages/hod/SetAcademicPeriod'
 import Results from './pages/student/Results'
 import ViewProposals from './pages/supervisor/ViewProposals'
 import ViewTheses from './pages/supervisor/ViewTheses'
+import ManageResults from './pages/hod/ManageResults'
 
 
 
@@ -167,6 +168,13 @@ function App() {
 <Route path="/supervisor/theses" element={
   <ProtectedRoute allowedRoles={['supervisor']}>
     <ViewTheses />
+  </ProtectedRoute>
+} />
+
+{/* HOD Manage Results */}
+<Route path="/hod/results" element={
+  <ProtectedRoute allowedRoles={['hod']}>
+    <ManageResults />
   </ProtectedRoute>
 } />
 

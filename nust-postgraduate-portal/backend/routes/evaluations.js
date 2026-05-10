@@ -117,27 +117,22 @@ await poolPromise.query(
 
 // GET /api/evaluations/student/:studentId
 // Get all evaluations for a student
+// GET /api/evaluations/student/:studentId
+// Only returns RELEASED evaluations to student
 router.get('/student/:studentId', async (req, res) => {
-
   const { studentId } = req.params
-
   try {
-
     const [rows] = await poolPromise.query(
       `SELECT e.*, u.name as examiner_name 
        FROM evaluations e
        JOIN users u ON e.examiner_id = u.id
-       WHERE e.student_id = ?`,
+       WHERE e.student_id = ? AND e.is_released = TRUE`,
       [studentId]
     )
-
     res.json(rows)
-
   } catch (err) {
-    console.error('Fetch evaluations error:', err)
     res.status(500).json({ message: 'Server error' })
   }
-
 })
 
 // GET /api/evaluations/all
@@ -160,6 +155,67 @@ router.get('/all', async (req, res) => {
 
   } catch (err) {
     console.error('Fetch all evaluations error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+
+})
+
+// GET /api/evaluations/all
+// HOD views all evaluations with student and examiner details
+router.get('/all', async (req, res) => {
+  try {
+    const [rows] = await poolPromise.query(
+      `SELECT e.*, 
+       u1.name as student_name, u1.degree,
+       u2.name as examiner_name
+       FROM evaluations e
+       JOIN users u1 ON e.student_id = u1.id
+       JOIN users u2 ON e.examiner_id = u2.id
+       ORDER BY e.submitted_at DESC`
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/evaluations/release/:studentId
+// HOD releases marks to student
+router.put('/release/:studentId', async (req, res) => {
+
+  const { studentId } = req.params
+
+  try {
+
+    // Mark all evaluations for this student as released
+    await poolPromise.query(
+      `UPDATE evaluations 
+       SET is_released = TRUE, released_at = NOW() 
+       WHERE student_id = ?`,
+      [studentId]
+    )
+
+    // Get student info for notification
+    const [studentRows] = await poolPromise.query(
+      'SELECT name FROM users WHERE id = ?',
+      [studentId]
+    )
+    const studentName = studentRows[0].name
+
+    // Notify student
+    await poolPromise.query(
+      'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+      [
+        studentId,
+        '🎓 Results Released',
+        'Your thesis examination results have been released by the HOD. Log in to view your final mark and examiner feedback.'
+      ]
+    )
+
+    res.json({ message: `Results released for ${studentName}` })
+
+  } catch (err) {
+    console.error('Release error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 

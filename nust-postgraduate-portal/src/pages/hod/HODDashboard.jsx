@@ -155,6 +155,27 @@ function HODDashboard() {
   </p>
 </div>
 
+{/* Manage Results Card */}
+<div
+  onClick={() => navigate('/hod/results')}
+  style={{
+    backgroundColor: 'white',
+    border: '1px solid #dddddd',
+    borderTop: '4px solid #8B0000',
+    padding: '25px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    width: '220px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+  }}>
+  <h3 style={{ color: '#8B0000', marginBottom: '10px' }}>
+    🎯 Manage Results
+  </h3>
+  <p style={{ fontSize: '13px', color: '#666666' }}>
+    Review examiner marks and release results to students
+  </p>
+</div>
+
         </div>
       </div>
     </div>

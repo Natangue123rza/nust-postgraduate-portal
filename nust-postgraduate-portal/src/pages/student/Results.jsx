@@ -10,40 +10,35 @@ function Results() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Data from database
   const [proposal, setProposal] = useState(null)
   const [thesis, setThesis] = useState(null)
   const [reports, setReports] = useState([])
   const [evaluations, setEvaluations] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch all student data when page loads
   useEffect(() => {
     const fetchAll = async () => {
       try {
 
-        // Fetch proposal
         const proposalRes = await fetch(
           `http://localhost:5000/api/proposals/student/${user.id}`
         )
         const proposalData = await proposalRes.json()
         setProposal(proposalData.length > 0 ? proposalData[0] : null)
 
-        // Fetch thesis
         const thesisRes = await fetch(
           `http://localhost:5000/api/theses/student/${user.id}`
         )
         const thesisData = await thesisRes.json()
         setThesis(thesisData.length > 0 ? thesisData[0] : null)
 
-        // Fetch progress reports
         const reportsRes = await fetch(
           `http://localhost:5000/api/progress/student/${user.id}`
         )
         const reportsData = await reportsRes.json()
         setReports(reportsData)
 
-        // Fetch evaluations
+        // Only released evaluations come back
         const evalRes = await fetch(
           `http://localhost:5000/api/evaluations/student/${user.id}`
         )
@@ -59,7 +54,7 @@ function Results() {
     fetchAll()
   }, [user.id])
 
-  // Calculate final mark based on degree type
+  // Calculate final mark
   const getFinalMark = () => {
     if (evaluations.length === 0) return null
 
@@ -106,11 +101,7 @@ function Results() {
     <div>
       <Navbar />
 
-      <div style={{
-        padding: '30px',
-        maxWidth: '900px',
-        margin: '0 auto'
-      }}>
+      <div style={{ padding: '30px', maxWidth: '900px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{
@@ -120,9 +111,7 @@ function Results() {
           borderRadius: '8px',
           marginBottom: '30px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>
-            My Results & Status
-          </h1>
+          <h1 style={{ margin: 0, fontSize: '20px' }}>My Results & Status</h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
             {user.degree} Student — Faculty of Computing and Informatics
           </p>
@@ -144,11 +133,8 @@ function Results() {
           ← Back to Dashboard
         </button>
 
-        {/* Loading */}
         {loading && (
-          <p style={{ color: '#666', textAlign: 'center' }}>
-            Loading your results...
-          </p>
+          <p style={{ color: '#666', textAlign: 'center' }}>Loading your results...</p>
         )}
 
         {!loading && (
@@ -171,10 +157,12 @@ function Results() {
                   <h3 style={{ color: '#002147', marginBottom: '5px', fontSize: '16px' }}>
                     📄 Research Proposal
                   </h3>
-                  {proposal && (
+                  {proposal ? (
                     <p style={{ fontSize: '13px', color: '#666' }}>
                       {proposal.title} — Submitted: {new Date(proposal.submitted_at).toLocaleDateString()}
                     </p>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: '#666' }}>Not submitted yet</p>
                   )}
                   {proposal?.hdc_comments && (
                     <p style={{ fontSize: '13px', color: '#333', marginTop: '8px' }}>
@@ -251,10 +239,12 @@ function Results() {
                   <h3 style={{ color: '#002147', marginBottom: '5px', fontSize: '16px' }}>
                     🎓 Thesis Submission
                   </h3>
-                  {thesis && (
+                  {thesis ? (
                     <p style={{ fontSize: '13px', color: '#666' }}>
                       {thesis.title} — Submitted: {new Date(thesis.submitted_at).toLocaleDateString()}
                     </p>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: '#666' }}>Not submitted yet</p>
                   )}
                 </div>
                 {statusBadge(thesis?.status)}
@@ -273,49 +263,80 @@ function Results() {
                 📝 Examination Results
               </h3>
 
-              {evaluations.length === 0 ? (
-                <p style={{ fontSize: '13px', color: '#666' }}>
-                  No examination results yet.
-                </p>
-              ) : (
+              {/* Results not released yet */}
+              {evaluations.length === 0 && (
+                <div style={{
+                  backgroundColor: '#fff3e0',
+                  border: '1px solid #ff9800',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  color: '#e65100'
+                }}>
+                  ⏳ Your examination results have not been released yet. 
+                  You will be notified when the HOD releases your results.
+                </div>
+              )}
+
+              {/* Results released */}
+              {evaluations.length > 0 && (
                 <div>
                   {evaluations.map((evaluation, index) => (
                     <div key={evaluation.id} style={{
                       border: '1px solid #f0f0f0',
                       borderRadius: '6px',
-                      padding: '12px 15px',
-                      marginBottom: '10px'
+                      padding: '15px',
+                      marginBottom: '15px'
                     }}>
-                      <p style={{ fontWeight: 'bold', color: '#002147', marginBottom: '5px' }}>
-                        {index === 0 ? 'Internal Examiner' : 'External Examiner'}
-                      </p>
-                      <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                        {[
-                          { label: 'Section A', mark: evaluation.section_a, max: 20 },
-                          { label: 'Section B', mark: evaluation.section_b, max: 30 },
-                          { label: 'Section C', mark: evaluation.section_c, max: 20 },
-                          { label: 'Section D', mark: evaluation.section_d, max: 20 },
-                          { label: 'Section E', mark: evaluation.section_e, max: 10 }
-                        ].map(s => (
-                          <span key={s.label} style={{
-                            backgroundColor: '#f0f7ff',
-                            color: '#002147',
-                            padding: '3px 10px',
-                            borderRadius: '4px',
-                            fontSize: '12px'
-                          }}>
-                            {s.label}: {s.mark}/{s.max}
-                          </span>
-                        ))}
-                      </div>
+                      {/* Examiner number - no name */}
                       <p style={{
-                        marginTop: '8px',
                         fontWeight: 'bold',
                         color: '#002147',
+                        marginBottom: '10px',
                         fontSize: '14px'
                       }}>
-                        Total: {evaluation.total_mark}/100
+                        Examiner {index + 1} Evaluation
                       </p>
+
+                      {/* Overall Assessment */}
+                      {evaluation.overall_assessment && (
+                        <div style={{
+                          backgroundColor: '#f5f5f5',
+                          padding: '12px',
+                          borderRadius: '4px',
+                          marginBottom: '12px',
+                          fontSize: '13px',
+                          color: '#333'                           
+                        }}>
+                          <strong>Overall Assessment:</strong>
+                          <p style={{ marginTop: '5px' }}>{evaluation.overall_assessment}</p>
+                        </div>
+                      )}
+
+                      {/* Recommendation */}
+                      <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px' }}>
+                        <strong>Recommendation:</strong> {
+                          evaluation.recommendation === 'a' ? '✅ Thesis accepted in present form' :
+                          evaluation.recommendation === 'b' ? '📝 Minor corrections required' :
+                          evaluation.recommendation === 'c' ? '🔄 Resubmit for re-examination' :
+                          evaluation.recommendation === 'd' ? '❌ Degree not awarded' : 'N/A'
+                        }
+                      </p>
+
+                      {/* Total mark */}
+                      <div style={{
+                        backgroundColor: '#002147',
+                        color: 'white',
+                        padding: '10px 15px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span>Total Mark</span>
+                        <span style={{ fontWeight: 'bold' }}>
+                          {evaluation.total_mark}/100
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -323,10 +344,10 @@ function Results() {
             </div>
 
             {/* Final Mark */}
-            {finalMark && (
+            {finalMark && evaluations.length > 0 && (
               <div style={{
                 backgroundColor: finalMark.discrepancy ? '#fff3e0' : '#002147',
-                color: 'white',
+                color: finalMark.discrepancy ? '#e65100' : 'white',
                 padding: '25px',
                 borderRadius: '8px',
                 textAlign: 'center'
@@ -334,16 +355,23 @@ function Results() {
                 <h2 style={{ margin: 0, marginBottom: '10px', fontSize: '18px' }}>
                   🎯 Final Result
                 </h2>
-                <p style={{ fontSize: '14px', margin: 0 }}>
-                  {finalMark.message}
-                </p>
-                {finalMark.finalMark && (
-                  <p style={{
-                    fontSize: '48px',
-                    fontWeight: 'bold',
-                    margin: '10px 0 0 0'
-                  }}>
-                    {finalMark.finalMark}/100
+
+                {finalMark.discrepancy ? (
+                  <p style={{ fontSize: '14px', margin: 0 }}>
+                    ⚠️ Your marks are under review. Please wait for the HOD.
+                  </p>
+                ) : finalMark.finalMark ? (
+                  <div>
+                    <p style={{ fontSize: '48px', fontWeight: 'bold', margin: '10px 0' }}>
+                      {finalMark.finalMark}/100
+                    </p>
+                    <p style={{ fontSize: '18px', margin: 0 }}>
+                      {finalMark.finalMark >= 50 ? '✅ Pass' : '❌ Fail'}
+                    </p>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '14px', margin: 0 }}>
+                    ⏳ Awaiting all examiner results
                   </p>
                 )}
               </div>
