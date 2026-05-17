@@ -221,4 +221,29 @@ router.put('/release/:studentId', async (req, res) => {
 
 })
 
+// GET /api/evaluations/examiner/:examinerId
+// Get all evaluations submitted by this examiner
+router.get('/examiner/:examinerId', async (req, res) => {
+
+  const { examinerId } = req.params
+
+  try {
+
+    const [rows] = await poolPromise.query(
+      `SELECT e.*, u.name as student_name, u.degree
+       FROM evaluations e
+       JOIN users u ON e.student_id = u.id
+       WHERE e.examiner_id = ?`,
+      [examinerId]
+    )
+
+    res.json(rows)
+
+  } catch (err) {
+    console.error('Fetch examiner evaluations error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+
+})
+
 module.exports = router

@@ -27,18 +27,27 @@ function EvaluationForm() {
   const [submitted, setSubmitted] = useState(false)
 
   // Fetch students from database
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/auth/students')
-        const data = await response.json()
-        if (response.ok) setStudents(data)
-      } catch (err) {
-        console.error('Error fetching students:', err)
-      }
+ useEffect(() => {
+  const fetchAssignedStudents = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/assignments/examiner/${user.id}`
+      )
+      const data = await response.json()
+      // Convert assignments to student format
+      const assignedStudents = data.map(a => ({
+        id: a.student_id,
+        name: a.student_name,
+        degree: a.degree,
+        email: a.email
+      }))
+      setStudents(assignedStudents)
+    } catch (err) {
+      console.error('Error fetching assigned students:', err)
     }
-    fetchStudents()
-  }, [])
+  }
+  fetchAssignedStudents()
+}, [user.id])
 
   // Check if examiner already evaluated selected student
   useEffect(() => {

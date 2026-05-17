@@ -13,9 +13,15 @@ export const AuthContext = createContext(null)
 // Any component inside this wrapper can see who is logged in
 export function AuthProvider({ children }) {
 
-    // user holds the currently logged in user's information
-    // starts as null because nobody is logged in yet
-    const [user , setUser] = useState(null)
+   // Check localStorage for existing token on app start
+const [user, setUser] = useState(() => {
+  const token = localStorage.getItem('token')
+  const savedUser = localStorage.getItem('user')
+  if (token && savedUser) {
+    return JSON.parse(savedUser)
+  }
+  return null
+})
 
     // Shared deadlines set by HOD
 const [deadlines, setDeadlines] = useState({
@@ -25,14 +31,19 @@ const [deadlines, setDeadlines] = useState({
 })
 
     // login function saves the user to our notice board
-    const login = (userData) => {
-        setUser(userData)
-    }
+  const login = (userData) => {
+  setUser(userData)
+  // Save user to localStorage so they stay logged in on refresh
+  localStorage.setItem('user', JSON.stringify(userData))
+}
 
     // logout function clears the notice board
-    const logout = () => {
-        setUser(null)
-    }
+   const logout = () => {
+  setUser(null)
+  // Clear localStorage on logout
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+}
 
 
 

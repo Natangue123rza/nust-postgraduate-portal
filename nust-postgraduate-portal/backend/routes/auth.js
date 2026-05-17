@@ -79,4 +79,16 @@ router.get('/students', async (req, res) => {
   }
 })
 
+// GET /api/auth/examiners
+router.get('/examiners', async (req, res) => {
+  try {
+    const [rows] = await poolPromise.query(
+      "SELECT id, name, email FROM users WHERE role = 'examiner'"
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 module.exports = router

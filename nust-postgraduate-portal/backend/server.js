@@ -22,6 +22,7 @@ const evaluationRoutes = require('./routes/evaluations')
 const deadlineRoutes = require('./routes/deadlines')
 const uploadRoutes = require('./routes/uploads')
 const notificationRoutes = require('./routes/notifications')
+const assignmentRoutes = require('./routes/assignments')
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -33,6 +34,7 @@ app.use('/api/evaluations', evaluationRoutes)
 app.use('/api/deadlines', deadlineRoutes)
 app.use('/api/uploads', uploadRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/assignments', assignmentRoutes)
 
 // Test route
 app.get('/', (req, res) => {

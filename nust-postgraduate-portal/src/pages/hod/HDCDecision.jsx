@@ -1,45 +1,35 @@
 // src/pages/hod/HDCDecision.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
 
 function HDCDecision() {
 
   const navigate = useNavigate()
-
-  // Simulated proposals waiting for HDC decision
-  const [proposals, setProposals] = useState([
-    {
-      id: 1,
-      studentName: 'David Student',
-      degree: 'Masters',
-      title: 'Machine Learning in Healthcare',
-      submittedAt: '10/04/2026',
-      status: 'Pending',
-      decision: '',
-      comments: ''
-    },
-    {
-      id: 2,
-      studentName: 'Paulina Efriam',
-      degree: 'PhD',
-      title: 'Blockchain Security in African Financial Systems',
-      submittedAt: '11/04/2026',
-      status: 'Pending',
-      decision: '',
-      comments: ''
-    }
-  ])
-
-  // Track which proposal is selected
+  const [proposals, setProposals] = useState([])
+  const [loading, setLoading] = useState(true)
   const [selectedProposal, setSelectedProposal] = useState(null)
-
-  // Decision form fields
   const [decision, setDecision] = useState('')
   const [comments, setComments] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  // Handle saving decision
-  const handleSaveDecision = () => {
+  // Fetch all proposals from database
+  useEffect(() => {
+    const fetchProposals = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/proposals/all')
+        const data = await response.json()
+        setProposals(data)
+      } catch (err) {
+        console.error('Error fetching proposals:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProposals()
+  }, [])
+
+  const handleSaveDecision = async () => {
 
     if (!decision) {
       alert('Please select a decision.')
@@ -51,28 +41,67 @@ function HDCDecision() {
       return
     }
 
-    // Update the proposal status
-    setProposals(proposals.map(p =>
-      p.id === selectedProposal.id
-        ? {
-            ...p,
-            status: decision === 'approved' ? 'Approved' : 'Rejected',
-            decision,
-            comments
-          }
-        : p
-    ))
+    setSaving(true)
 
-    // Clear selection
-    setSelectedProposal(null)
-    setDecision('')
-    setComments('')
+    try {
 
-    alert(`Proposal ${decision === 'approved' ? 'approved' : 'rejected'} successfully!`)
+      const response = await fetch(
+        `http://localhost:5000/api/proposals/hdc-decision/${selectedProposal.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hdcDecision: decision,
+            hdcComments: comments
+          })
+        }
+      )
 
+      const data = await response.json()
+
+      if (!response.ok) {
+        alert(data.message)
+        return
+      }
+
+      // Notify student
+      await fetch('http://localhost:5000/api/notifications/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedProposal.student_id,
+          title: decision === 'approved' ? '✅ Proposal Approved' : '❌ Proposal Rejected',
+          message: decision === 'approved'
+            ? `Your research proposal "${selectedProposal.title}" has been approved by the HDC committee. You may proceed with your research.`
+            : `Your research proposal "${selectedProposal.title}" has been rejected by the HDC committee. Please review the comments and resubmit.`
+        })
+      })
+
+      // Update local state
+      setProposals(proposals.map(p =>
+        p.id === selectedProposal.id
+          ? {
+              ...p,
+              status: decision === 'approved' ? 'Approved' : 'Rejected',
+              hdc_decision: decision,
+              hdc_comments: comments
+            }
+          : p
+      ))
+
+      setSelectedProposal(null)
+      setDecision('')
+      setComments('')
+      alert(`Proposal ${decision === 'approved' ? 'approved' : 'rejected'} successfully! Student has been notified.`)
+
+    } catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  // Status color helper
   const statusColor = (status) => {
     if (status === 'Approved') return { bg: '#e6f4ea', color: '#2e7d32', border: '#4caf50' }
     if (status === 'Rejected') return { bg: '#fce4e4', color: '#c62828', border: '#ef5350' }
@@ -83,11 +112,7 @@ function HDCDecision() {
     <div>
       <Navbar />
 
-      <div style={{
-        padding: '30px',
-        maxWidth: '900px',
-        margin: '0 auto'
-      }}>
+      <div style={{ padding: '30px', maxWidth: '900px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{
@@ -97,9 +122,7 @@ function HDCDecision() {
           borderRadius: '8px',
           marginBottom: '30px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '20px' }}>
-            HDC Proposal Decisions
-          </h1>
+          <h1 style={{ margin: 0, fontSize: '20px' }}>HDC Proposal Decisions</h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
             Record Higher Degrees Committee decisions on student proposals
           </p>
@@ -121,29 +144,36 @@ function HDCDecision() {
           ← Back to Dashboard
         </button>
 
-        {/* Proposals list */}
-        <h2 style={{
-          color: '#002147',
-          marginBottom: '20px',
-          fontSize: '18px',
-          borderLeft: '4px solid #8B0000',
-          paddingLeft: '10px'
-        }}>
-          Submitted Proposals
-        </h2>
+        {/* Loading */}
+        {loading && (
+          <p style={{ color: '#666', textAlign: 'center' }}>Loading proposals...</p>
+        )}
 
-        {proposals.map(proposal => (
-          <div
-            key={proposal.id}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderLeft: `4px solid ${proposal.degree === 'PhD' ? '#8B0000' : '#002147'}`,
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '15px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
+        {/* No proposals */}
+        {!loading && proposals.length === 0 && (
+          <div style={{
+            backgroundColor: '#fff3e0',
+            border: '1px solid #ff9800',
+            padding: '20px',
+            borderRadius: '8px',
+            color: '#e65100',
+            fontSize: '14px'
+          }}>
+            ⏳ No proposals submitted yet.
+          </div>
+        )}
+
+        {/* Proposals list */}
+        {!loading && proposals.map(proposal => (
+          <div key={proposal.id} style={{
+            backgroundColor: 'white',
+            border: '1px solid #dddddd',
+            borderLeft: `4px solid ${proposal.degree === 'PhD' ? '#8B0000' : '#002147'}`,
+            borderRadius: '8px',
+            padding: '20px',
+            marginBottom: '15px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+          }}>
 
             {/* Proposal info */}
             <div style={{
@@ -153,34 +183,51 @@ function HDCDecision() {
               marginBottom: '12px'
             }}>
               <div>
-                <h3 style={{
-                  color: '#002147',
-                  marginBottom: '5px',
-                  fontSize: '15px'
-                }}>
+                <h3 style={{ color: '#002147', marginBottom: '5px', fontSize: '15px' }}>
                   {proposal.title}
                 </h3>
                 <p style={{ fontSize: '13px', color: '#666' }}>
-                  {proposal.studentName} — {proposal.degree} | Submitted: {proposal.submittedAt}
+                  {proposal.student_name} — {proposal.degree} |
+                  Submitted: {new Date(proposal.submitted_at).toLocaleDateString()}
                 </p>
               </div>
 
-              {/* Status badge */}
-              <span style={{
-                backgroundColor: statusColor(proposal.status).bg,
-                color: statusColor(proposal.status).color,
-                border: `1px solid ${statusColor(proposal.status).border}`,
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
-                whiteSpace: 'nowrap'
-              }}>
-                {proposal.status}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* View PDF */}
+                {proposal.file_name && (
+                  
+                  <a href={`http://localhost:5000/api/uploads/${proposal.file_name}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      backgroundColor: '#002147',
+                      color: 'white',
+                      padding: '5px 12px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      textDecoration: 'none'
+                    }}>
+                    📄 View PDF
+                  </a>
+                )}
+
+                {/* Status badge */}
+                <span style={{
+                  backgroundColor: statusColor(proposal.status).bg,
+                  color: statusColor(proposal.status).color,
+                  border: `1px solid ${statusColor(proposal.status).border}`,
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {proposal.status}
+                </span>
+              </div>
             </div>
 
-            {/* Show existing comments if decided */}
-            {proposal.comments && (
+            {/* Existing HDC comments */}
+            {proposal.hdc_comments && (
               <div style={{
                 backgroundColor: '#f5f5f5',
                 padding: '10px',
@@ -189,12 +236,12 @@ function HDCDecision() {
                 color: '#333',
                 marginBottom: '12px'
               }}>
-                <strong>HOD Comments:</strong> {proposal.comments}
+                <strong>HDC Comments:</strong> {proposal.hdc_comments}
               </div>
             )}
 
-            {/* Record decision button - only show if pending */}
-            {proposal.status === 'Pending' && (
+            {/* Record decision button - only for pending */}
+            {proposal.status === 'Pending HDC Review' && (
               <button
                 onClick={() => {
                   setSelectedProposal(proposal)
@@ -217,7 +264,7 @@ function HDCDecision() {
           </div>
         ))}
 
-        {/* Decision form - shows when proposal selected */}
+        {/* Decision form */}
         {selectedProposal && (
           <div style={{
             backgroundColor: 'white',
@@ -312,18 +359,19 @@ function HDCDecision() {
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={handleSaveDecision}
+                disabled={saving}
                 style={{
                   flex: 1,
                   padding: '12px',
-                  backgroundColor: '#002147',
+                  backgroundColor: saving ? '#cccccc' : '#002147',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '15px',
                   fontWeight: 'bold',
-                  cursor: 'pointer'
+                  cursor: saving ? 'not-allowed' : 'pointer'
                 }}>
-                Save Decision
+                {saving ? 'Saving...' : 'Save Decision'}
               </button>
               <button
                 onClick={() => setSelectedProposal(null)}
