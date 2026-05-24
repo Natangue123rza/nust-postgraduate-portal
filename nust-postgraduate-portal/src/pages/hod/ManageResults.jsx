@@ -126,6 +126,50 @@ function ManageResults() {
     return { bg: '#fff3e0', color: '#e65100', border: '#ff9800' }
   }
 
+  // Handle examiner reassignment for discrepancy
+const handleReassign = async (studentId, studentName) => {
+  if (!window.confirm(
+    `Reassign examiner for ${studentName}?\n\nThis will:\n• Delete existing evaluations\n• Allow new examiner to be assigned\n• Notify the student`
+  )) return
+
+  try {
+    // Delete existing evaluations for this student
+    const response = await fetch(
+      `http://localhost:5000/api/evaluations/delete/${studentId}`,
+      { method: 'DELETE' }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      alert(data.message)
+      return
+    }
+
+    // Notify student
+    await fetch('http://localhost:5000/api/notifications/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: studentId,
+        title: '🔄 Thesis Being Remarked',
+        message: 'There was a discrepancy between your examiner marks. Your thesis has been sent for remarking. You will be notified when new results are available.'
+      })
+    })
+
+    alert(`✅ Evaluations cleared for ${studentName}. Please assign a new examiner.`)
+
+    // Refresh evaluations
+    const evalsRes = await fetch('http://localhost:5000/api/evaluations/all')
+    const evalsData = await evalsRes.json()
+    setEvaluations(evalsData)
+
+  } catch (err) {
+    alert('Could not connect to server.')
+    console.error(err)
+  }
+}
+
   return (
     <div>
       <Navbar />
@@ -332,20 +376,43 @@ function ManageResults() {
                         </button>
                       )}
 
-                      {/* Discrepancy warning */}
-                      {result?.discrepancy && (
-                        <div style={{
-                          backgroundColor: '#fce4e4',
-                          border: '1px solid #ef5350',
-                          padding: '12px 15px',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          color: '#c62828'
-                        }}>
-                          ⚠️ <strong>Action Required:</strong> The mark difference is {result.difference} points 
-                          which exceeds the 10 point threshold. Please reassign examiners or request remarking.
-                        </div>
-                      )}
+                     {/* Discrepancy warning + reassign */}
+{result?.discrepancy && (
+  <div style={{
+    backgroundColor: '#fce4e4',
+    border: '1px solid #ef5350',
+    padding: '15px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    color: '#c62828'
+  }}>
+    <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+      ⚠️ Mark Discrepancy Detected — {result.difference} point difference
+    </p>
+    <p style={{ marginBottom: '12px' }}>
+      Internal: {studentEvals[0]?.total_mark}/100 |
+      External: {studentEvals[1]?.total_mark}/100
+    </p>
+    <p style={{ marginBottom: '12px', fontSize: '12px' }}>
+      This exceeds the 10 point threshold. You must reassign 
+      an examiner for remarking before results can be released.
+    </p>
+    <button
+      onClick={() => handleReassign(student.id, student.name)}
+      style={{
+        backgroundColor: '#c62828',
+        color: 'white',
+        border: 'none',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        fontSize: '13px',
+        fontWeight: 'bold',
+        cursor: 'pointer'
+      }}>
+      🔄 Reassign Examiner
+    </button>
+  </div>
+)}
 
                     </div>
                   )}

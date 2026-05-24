@@ -2,15 +2,31 @@
 
 import Navbar from "../../components/Navbar"
 import { useNavigate } from "react-router-dom"
-import fakeUsers from "../../utils/fakeUsers"
+import { useState, useEffect } from 'react'
+import { useAuth } from '../../context/AuthContext'
 
 
 function StudentList() {
 
     const navigate = useNavigate()
 
-    // Get only students from fakeUsers
-    const students = fakeUsers.filter(u => u.role === 'student')
+    const { user } = useAuth()
+const [students, setStudents] = useState([])
+
+useEffect(() => {
+  const fetchStudents = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/auth/supervisor-students/${user.id}`
+      )
+      const data = await response.json()
+      setStudents(data)
+    } catch (err) {
+      console.error('Error fetching students:', err)
+    }
+  }
+  fetchStudents()
+}, [user.id])
 
     return (
         <div>

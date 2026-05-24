@@ -139,4 +139,26 @@ router.put('/hdc-decision/:proposalId', async (req, res) => {
 
 })
 
+// PUT /api/proposals/resubmit/:proposalId
+// Student resubmits a rejected proposal
+router.put('/resubmit/:proposalId', async (req, res) => {
+  const { proposalId } = req.body
+  const { title, description, fileName } = req.body
+
+  try {
+    await poolPromise.query(
+      `UPDATE proposals 
+       SET title = ?, description = ?, file_name = ?, 
+       status = 'Pending HDC Review', hdc_decision = 'Pending',
+       hdc_comments = NULL, submitted_at = NOW()
+       WHERE id = ?`,
+      [title, description, fileName, proposalId]
+    )
+    res.json({ message: 'Proposal resubmitted successfully!' })
+  } catch (err) {
+    console.error('Resubmit error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 module.exports = router

@@ -246,4 +246,27 @@ router.get('/examiner/:examinerId', async (req, res) => {
 
 })
 
+// DELETE /api/evaluations/delete/:studentId
+// HOD deletes evaluations for remarking
+router.delete('/delete/:studentId', async (req, res) => {
+  const { studentId } = req.params
+  try {
+    await poolPromise.query(
+      'DELETE FROM evaluations WHERE student_id = ?',
+      [studentId]
+    )
+
+    // Also delete examiner assignments so HOD can reassign
+    await poolPromise.query(
+      'DELETE FROM examiner_assignments WHERE student_id = ?',
+      [studentId]
+    )
+
+    res.json({ message: 'Evaluations cleared for remarking' })
+  } catch (err) {
+    console.error('Delete evaluations error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 module.exports = router
