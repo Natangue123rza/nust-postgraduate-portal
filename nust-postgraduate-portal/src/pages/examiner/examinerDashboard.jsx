@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 function ExaminerDashboard() {
 
@@ -90,14 +91,7 @@ function ExaminerDashboard() {
         </div>
 
         {/* Loading */}
-        {loading && (
-          <p style={{
-            color: '#666',
-            textAlign: 'center'
-          }}>
-            Loading your assignments...
-          </p>
-        )}
+       {loading && <LoadingSpinner message="Loading your assignments..." />}
 
         {/* No assignments */}
         {!loading && assignments.length === 0 && (

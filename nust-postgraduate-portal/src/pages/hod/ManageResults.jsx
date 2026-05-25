@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 function ManageResults() {
 
@@ -206,9 +207,7 @@ const handleReassign = async (studentId, studentName) => {
           ← Back to Dashboard
         </button>
 
-        {loading && (
-          <p style={{ color: '#666', textAlign: 'center' }}>Loading results...</p>
-        )}
+        {loading && <LoadingSpinner message="Loading results..." />}
 
         {!loading && (
           <div>

@@ -80,6 +80,29 @@ useEffect(() => {
           Registered Students
         </h2>
 
+        {/* No students assigned yet */}
+{students.length === 0 && (
+  <div style={{
+    backgroundColor: '#fff3e0',
+    border: '1px solid #ff9800',
+    padding: '25px',
+    borderRadius: '8px',
+    textAlign: 'center',
+    color: '#e65100',
+    fontSize: '14px',
+    marginBottom: '20px'
+  }}>
+    ⏳ <strong>No students assigned yet.</strong>
+
+    <p style={{
+      marginTop: '8px',
+      fontSize: '13px'
+    }}>
+      The HOD will assign students to you. You will be notified when a student is assigned.
+    </p>
+  </div>
+)}
+
         {/* Student table */}
         <div style={{
           backgroundColor: 'white',

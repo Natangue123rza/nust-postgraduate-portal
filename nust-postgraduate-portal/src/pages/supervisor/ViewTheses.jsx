@@ -2,27 +2,42 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 function ViewTheses() {
 
   const navigate = useNavigate()
   const [theses, setTheses] = useState([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+useEffect(() => {
+  const fetchTheses = async () => {
+    try {
+      const studentsRes = await fetch(
+        `http://localhost:5000/api/auth/supervisor-students/${user.id}`
+      )
+      const students = await studentsRes.json()
 
-  useEffect(() => {
-    const fetchTheses = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/theses/all')
-        const data = await response.json()
-        setTheses(data)
-      } catch (err) {
-        console.error('Error fetching theses:', err)
-      } finally {
+      if (students.length === 0) {
+        setTheses([])
         setLoading(false)
+        return
       }
+
+      const thesesRes = await fetch('http://localhost:5000/api/theses/all')
+      const allTheses = await thesesRes.json()
+
+      const studentIds = students.map(s => s.id)
+      setTheses(allTheses.filter(t => studentIds.includes(t.student_id)))
+
+    } catch (err) {
+      console.error('Error fetching theses:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchTheses()
-  }, [])
+  }
+  fetchTheses()
+}, [user.id])
 
   const statusColor = (status) => {
     if (status === 'Approved') return { bg: '#e6f4ea', color: '#2e7d32', border: '#4caf50' }
@@ -83,7 +98,7 @@ function ViewTheses() {
                 textAlign: 'center',
                 color: '#666'
               }}>
-                No theses submitted yet.
+                   No thesis submitted by your assigned students yet.
               </div>
             ) : (
               theses.map(item => (

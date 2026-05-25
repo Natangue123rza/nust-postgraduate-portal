@@ -176,6 +176,27 @@ function HODDashboard() {
   </p>
 </div>
 
+{/* Assign Supervisor Card */}
+<div
+  onClick={() => navigate('/hod/assign-supervisor')}
+  style={{
+    backgroundColor: 'white',
+    border: '1px solid #dddddd',
+    borderTop: '4px solid #002147',
+    padding: '25px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    width: '220px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+  }}>
+  <h3 style={{ color: '#002147', marginBottom: '10px' }}>
+    👨‍🏫 Assign Supervisor
+  </h3>
+  <p style={{ fontSize: '13px', color: '#666666' }}>
+    Assign supervisors to postgraduate students
+  </p>
+</div>
+
         </div>
       </div>
     </div>

@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from '../../components/LoadingSpinner'
+import { useAuth } from '../../context/AuthContext'
 
 function ProgressReportReview() {
 
@@ -12,24 +14,27 @@ function ProgressReportReview() {
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
 
   // Supervisor comment
   const [supervisorComment, setSupervisorComment] = useState('')
   const [saved, setSaved] = useState(false)
 
-  // Fetch students from database when page loads
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/auth/students')
-        const data = await response.json()
-        setStudents(data)
-      } catch (err) {
-        console.error('Error fetching students:', err)
-      }
+  // Fetch assigned students from database when page loads
+ useEffect(() => {
+  const fetchStudents = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/auth/supervisor-students/${user.id}`
+      )
+      const data = await response.json()
+      setStudents(data)
+    } catch (err) {
+      console.error('Error fetching students:', err)
     }
-    fetchStudents()
-  }, [])
+  }
+  fetchStudents()
+}, [user.id])
 
   // Fetch report when student is selected
   const handleSelectStudent = async (student) => {
@@ -141,6 +146,29 @@ function ProgressReportReview() {
           Select Student
         </h2>
 
+{/* No students assigned yet */}
+{!loading && students.length === 0 && (
+  <div style={{
+    backgroundColor: '#fff3e0',
+    border: '1px solid #ff9800',
+    padding: '25px',
+    borderRadius: '8px',
+    color: '#e65100',
+    fontSize: '14px',
+    textAlign: 'center',
+    marginBottom: '25px'
+  }}>
+    ⏳ <strong>No students assigned yet.</strong>
+
+    <p style={{
+      marginTop: '8px',
+      fontSize: '13px'
+    }}>
+      You will be notified when the HOD assigns students to you.
+    </p>
+  </div>
+)}
+
         <div style={{
           display: 'flex',
           gap: '15px',
@@ -176,9 +204,7 @@ function ProgressReportReview() {
         </div>
 
         {/* Loading */}
-        {loading && (
-          <p style={{ color: '#666', textAlign: 'center' }}>Loading report...</p>
-        )}
+       {loading && <LoadingSpinner message="Loading report..." />}
 
         {/* No report found */}
         {selectedStudent && !loading && !report && (

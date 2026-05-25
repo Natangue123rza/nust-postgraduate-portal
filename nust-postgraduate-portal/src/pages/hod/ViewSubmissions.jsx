@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 function ViewSubmissions() {
 
@@ -107,9 +108,7 @@ function ViewSubmissions() {
           ← Back to Dashboard
         </button>
 
-        {loading && (
-          <p style={{ color: '#666', textAlign: 'center' }}>Loading submissions...</p>
-        )}
+      {loading && <LoadingSpinner message="Loading submissions..." />}
 
         {!loading && (
           <div style={{

@@ -30,6 +30,7 @@ import Results from './pages/student/Results'
 import ViewProposals from './pages/supervisor/ViewProposals'
 import ViewTheses from './pages/supervisor/ViewTheses'
 import ManageResults from './pages/hod/ManageResults'
+import AssignSupervisor from './pages/hod/AssignSupervisor'
 
 
 
@@ -175,6 +176,13 @@ function App() {
 <Route path="/hod/results" element={
   <ProtectedRoute allowedRoles={['hod']}>
     <ManageResults />
+  </ProtectedRoute>
+} />
+
+{/* HOD Assign Supervisor */}
+<Route path="/hod/assign-supervisor" element={
+  <ProtectedRoute allowedRoles={['hod']}>
+    <AssignSupervisor />
   </ProtectedRoute>
 } />
 

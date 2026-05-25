@@ -2,6 +2,7 @@
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 function AssignExaminers() {
 
@@ -20,24 +21,30 @@ function AssignExaminers() {
 
   // Track if assignment was saved
   const [assigned, setAssigned] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // Fetch students and examiners from database
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const studentsRes = await fetch('http://localhost:5000/api/auth/students')
-        const studentsData = await studentsRes.json()
-        setStudents(studentsData)
+  const fetchData = async () => {
+    try {
+      const studentsRes = await fetch('http://localhost:5000/api/auth/students')
+      const studentsData = await studentsRes.json()
+      setStudents(studentsData)
 
-        const examinersRes = await fetch('http://localhost:5000/api/auth/examiners')
-        const examinersData = await examinersRes.json()
-        setExaminers(examinersData)
-      } catch (err) {
-        console.error('Error fetching data:', err)
-      }
+      const examinersRes = await fetch('http://localhost:5000/api/auth/examiners')
+      const examinersData = await examinersRes.json()
+      setExaminers(examinersData)
+
+      setLoading(false)
+
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      setLoading(false)
     }
-    fetchData()
-  }, [])
+  }
+
+  fetchData()
+}, [])
 
   const handleSelectStudent = (student) => {
     setSelectedStudent(student)
@@ -155,6 +162,8 @@ function AssignExaminers() {
           ← Back to Dashboard
         </button>
 
+        {loading && <LoadingSpinner message="Loading..." />}
+
         {/* Student list */}
         <h2 style={{
           color: '#002147',
@@ -172,7 +181,7 @@ function AssignExaminers() {
           flexWrap: 'wrap',
           marginBottom: '30px'
         }}>
-          {students.map(student => (
+          {!loading && students.map(student => (
             <div
               key={student.id}
               onClick={() => handleSelectStudent(student)}

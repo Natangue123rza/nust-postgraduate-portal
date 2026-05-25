@@ -4,6 +4,7 @@ import Navbar from '../../components/Navbar'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { calculateFinalMark } from '../../utils/calculateMarks'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 function Results() {
 
@@ -133,9 +134,7 @@ function Results() {
           ← Back to Dashboard
         </button>
 
-        {loading && (
-          <p style={{ color: '#666', textAlign: 'center' }}>Loading your results...</p>
-        )}
+        {loading && <LoadingSpinner message="Loading your results..." />}
 
         {!loading && (
           <div>

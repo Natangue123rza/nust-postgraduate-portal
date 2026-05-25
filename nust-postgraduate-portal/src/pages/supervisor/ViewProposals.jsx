@@ -2,27 +2,47 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 function ViewProposals() {
 
   const navigate = useNavigate()
   const [proposals, setProposals] = useState([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
-  useEffect(() => {
-    const fetchProposals = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/proposals/all')
-        const data = await response.json()
-        setProposals(data)
-      } catch (err) {
-        console.error('Error fetching proposals:', err)
-      } finally {
+ useEffect(() => {
+  const fetchProposals = async () => {
+    try {
+      // Get only assigned students first
+      const studentsRes = await fetch(
+        `http://localhost:5000/api/auth/supervisor-students/${user.id}`
+      )
+      const students = await studentsRes.json()
+
+      // If no students assigned show empty
+      if (students.length === 0) {
+        setProposals([])
         setLoading(false)
+        return
       }
+
+      // Get all proposals then filter by assigned students
+      const proposalsRes = await fetch('http://localhost:5000/api/proposals/all')
+      const allProposals = await proposalsRes.json()
+
+      const studentIds = students.map(s => s.id)
+      const filtered = allProposals.filter(p => studentIds.includes(p.student_id))
+      setProposals(filtered)
+
+    } catch (err) {
+      console.error('Error fetching proposals:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchProposals()
-  }, [])
+  }
+  fetchProposals()
+}, [user.id])
 
   const statusColor = (status) => {
     if (status === 'Approved') return { bg: '#e6f4ea', color: '#2e7d32', border: '#4caf50' }
@@ -74,17 +94,17 @@ function ViewProposals() {
         {/* Proposals list */}
         {!loading && (
           <div>
-            {proposals.length === 0 ? (
-              <div style={{
-                backgroundColor: 'white',
-                padding: '30px',
-                borderRadius: '8px',
-                textAlign: 'center',
-                color: '#666'
-              }}>
-                No proposals submitted yet.
-              </div>
-            ) : (
+          {proposals.length === 0 ? (
+  <div style={{
+    backgroundColor: 'white',
+    padding: '30px',
+    borderRadius: '8px',
+    textAlign: 'center',
+    color: '#666'
+  }}>
+    No proposals submitted by your assigned students yet.
+  </div>
+) : (
               proposals.map(item => (
                 <div key={item.id} style={{
                   backgroundColor: 'white',
