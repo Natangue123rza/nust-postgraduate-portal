@@ -126,7 +126,9 @@ router.get('/student/:studentId', async (req, res) => {
       `SELECT e.*, u.name as examiner_name 
        FROM evaluations e
        JOIN users u ON e.examiner_id = u.id
-       WHERE e.student_id = ? AND e.is_released = TRUE`,
+       WHERE e.student_id = ? 
+       AND e.is_released = TRUE
+       AND e.is_voided = FALSE`,
       [studentId]
     )
     res.json(rows)
@@ -135,44 +137,26 @@ router.get('/student/:studentId', async (req, res) => {
   }
 })
 
-// GET /api/evaluations/all
-// HOD views all evaluations
-router.get('/all', async (req, res) => {
 
-  try {
-
-    const [rows] = await poolPromise.query(
-      `SELECT e.*, 
-       u1.name as student_name, u1.degree,
-       u2.name as examiner_name
-       FROM evaluations e
-       JOIN users u1 ON e.student_id = u1.id
-       JOIN users u2 ON e.examiner_id = u2.id
-       ORDER BY e.submitted_at DESC`
-    )
-
-    res.json(rows)
-
-  } catch (err) {
-    console.error('Fetch all evaluations error:', err)
-    res.status(500).json({ message: 'Server error' })
-  }
-
-})
 
 // GET /api/evaluations/all
 // HOD views all evaluations with student and examiner details
 router.get('/all', async (req, res) => {
+  const { departmentId } = req.query
   try {
-    const [rows] = await poolPromise.query(
-      `SELECT e.*, 
-       u1.name as student_name, u1.degree,
+    let query = `SELECT e.*, 
+       u1.name as student_name, u1.degree, u1.department_id,
        u2.name as examiner_name
        FROM evaluations e
        JOIN users u1 ON e.student_id = u1.id
-       JOIN users u2 ON e.examiner_id = u2.id
-       ORDER BY e.submitted_at DESC`
-    )
+       JOIN users u2 ON e.examiner_id = u2.id`
+    const params = []
+    if (departmentId) {
+      query += ' WHERE u1.department_id = ?'
+      params.push(departmentId)
+    }
+    query += ' ORDER BY e.submitted_at DESC'
+    const [rows] = await poolPromise.query(query, params)
     res.json(rows)
   } catch (err) {
     res.status(500).json({ message: 'Server error' })
@@ -251,20 +235,23 @@ router.get('/examiner/:examinerId', async (req, res) => {
 router.delete('/delete/:studentId', async (req, res) => {
   const { studentId } = req.params
   try {
+    // NEVER delete — mark as voided for accountability
     await poolPromise.query(
-      'DELETE FROM evaluations WHERE student_id = ?',
+      `UPDATE evaluations 
+       SET is_voided = TRUE, 
+       voided_reason = 'Mark discrepancy — sent for remarking',
+       voided_at = NOW()
+       WHERE student_id = ?`,
       [studentId]
     )
 
-    // Also delete examiner assignments so HOD can reassign
-    await poolPromise.query(
-      'DELETE FROM examiner_assignments WHERE student_id = ?',
-      [studentId]
-    )
+  // We deliberately do NOT delete examiner_assignments here. The assign route
+    // already clears old assignments when the HOD reassigns, so the examiner keeps
+    // the student (and their voided mark stays visible) until a fresh examiner is set.
 
-    res.json({ message: 'Evaluations cleared for remarking' })
+    res.json({ message: 'Evaluations voided for remarking — records kept for accountability' })
   } catch (err) {
-    console.error('Delete evaluations error:', err)
+    console.error('Void evaluations error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

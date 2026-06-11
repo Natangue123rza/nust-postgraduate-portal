@@ -90,7 +90,7 @@ function Navbar() {
           NUST Postgraduate Portal
         </h2>
         <p style={{ margin: 0, fontSize: '11px', color: '#aaaaaa' }}>
-          Faculty of Computing and Informatics
+             {user.faculty_name || 'Namibia University of Science and Technology'}
         </p>
       </div>
 

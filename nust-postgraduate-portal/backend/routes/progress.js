@@ -15,9 +15,7 @@ router.post('/submit', async (req, res) => {
     activitiesCompleted,
     activitiesInProgress,
     activitiesOutstanding,
-    onSchedule,
     onBudget,
-    onTarget,
     adjustments,
     challenges,
     risks,
@@ -26,18 +24,26 @@ router.post('/submit', async (req, res) => {
 
   try {
 
-    // Check for duplicate submission
-    const [existing] = await poolPromise.query(
-      'SELECT * FROM progress_reports WHERE student_id = ? AND semester = ?',
-      [studentId, semester]
+    // Block if there is an unreviewed report (must be reviewed before next)
+    const [pending] = await poolPromise.query(
+      `SELECT * FROM progress_reports 
+       WHERE student_id = ? 
+       AND (supervisor_comments IS NULL OR supervisor_comments = '')`,
+      [studentId]
     )
 
-    // If report already exists for this semester
-    if (existing.length > 0) {
+    if (pending.length > 0) {
       return res.status(400).json({
-        message: `You have already submitted a progress report for ${semester}`
+        message: 'Your previous progress report is still awaiting supervisor review. You cannot submit a new report until it has been reviewed.'
       })
     }
+
+    // Determine next report number from how many reports exist
+    const [countRows] = await poolPromise.query(
+      'SELECT COUNT(*) as count FROM progress_reports WHERE student_id = ?',
+      [studentId]
+    )
+    const reportNumber = countRows[0].count + 1
 
       // Auto calculate on_schedule
 // Check if submitted before the progress report deadline
@@ -75,20 +81,24 @@ const [studentRows] = await poolPromise.query(
 )
 const studentName = studentRows[0].name
     // Get supervisor to notify
-const [supervisors] = await poolPromise.query(
-  "SELECT id FROM users WHERE role = 'supervisor'"
+// Looks up THIS student's assigned supervisor + co-supervisor only
+const [supRows] = await poolPromise.query(
+  'SELECT supervisor_id, co_supervisor_id FROM users WHERE id = ?',
+  [studentId]
 )
+const supervisorId = supRows[0].supervisor_id
+const coSupervisorId = supRows[0].co_supervisor_id
 
     // Insert new report into database
-    await poolPromise.query(
+   await poolPromise.query(
       `INSERT INTO progress_reports 
-      (student_id, semester, research_problem, objectives, 
+      (student_id, semester, report_number, research_problem, objectives, 
       activities_completed, activities_in_progress, activities_outstanding,
       on_schedule, on_budget, on_target, adjustments, challenges, 
       risks, student_comments) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        studentId, semester, researchProblem, objectives,
+        studentId, semester, reportNumber, researchProblem, objectives,
         activitiesCompleted, activitiesInProgress, activitiesOutstanding,
         onSchedule, onBudget, onTarget, adjustments, challenges,
         risks, studentComments
@@ -96,15 +106,17 @@ const [supervisors] = await poolPromise.query(
     )
   
 
-// Create notification for each supervisor
-for (const supervisor of supervisors) {
+// Notify ONLY the assigned supervisor (and co-supervisor if one exists)
+if (supervisorId) {
   await poolPromise.query(
     'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
-    [
-      supervisor.id,
-      'New Progress Report',
-      `${studentName} has submitted a progress report for ${semester}. Please review and add your comments.`
-    ]
+    [supervisorId, 'New Progress Report', studentName + ' has submitted Progress Report ' + reportNumber + '. Please review and add your comments.']
+  )
+}
+if (coSupervisorId) {
+  await poolPromise.query(
+    'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+    [coSupervisorId, 'New Progress Report', studentName + ' has submitted Progress Report ' + reportNumber + '. Please review and add your comments.']
   )
 }
 
@@ -146,23 +158,22 @@ router.get('/student/:studentId', async (req, res) => {
 // GET /api/progress/all
 // Get all progress reports - for HOD and Supervisor
 router.get('/all', async (req, res) => {
-
+  const { departmentId } = req.query
   try {
-
-    const [rows] = await poolPromise.query(
-      `SELECT pr.*, u.name as student_name, u.degree 
+    let query = `SELECT pr.*, u.name as student_name, u.degree, u.department_id
        FROM progress_reports pr
-       JOIN users u ON pr.student_id = u.id
-       ORDER BY pr.submitted_at DESC`
-    )
-
+       JOIN users u ON pr.student_id = u.id`
+    const params = []
+    if (departmentId) {
+      query += ' WHERE u.department_id = ?'
+      params.push(departmentId)
+    }
+    query += ' ORDER BY pr.submitted_at DESC'
+    const [rows] = await poolPromise.query(query, params)
     res.json(rows)
-
   } catch (err) {
-    console.error('Fetch all reports error:', err)
     res.status(500).json({ message: 'Server error' })
   }
-
 })
 
 // PUT /api/progress/supervisor-comment/:reportId

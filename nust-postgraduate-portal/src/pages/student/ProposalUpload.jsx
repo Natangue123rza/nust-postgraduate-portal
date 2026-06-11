@@ -83,21 +83,20 @@ function ProposalUpload() {
 
       let response
 
-      if (isResubmitting && existingProposal) {
-        // Resubmit existing proposal
-        response = await fetch(
-          `http://localhost:5000/api/proposals/resubmit/${existingProposal.id}`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              proposalId: existingProposal.id,
-              title,
-              description,
-              fileName: uploadData.fileName
-            })
-          }
-        )
+    if (isResubmitting && existingProposal) {
+  // Resubmit as new version
+  response = await fetch(
+    `http://localhost:5000/api/proposals/resubmit-version/${existingProposal.id}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        description,
+        fileName: uploadData.fileName
+      })
+    }
+  )
       } else {
         // New submission
         response = await fetch('http://localhost:5000/api/proposals/submit', {
@@ -126,8 +125,11 @@ function ProposalUpload() {
   const renderExistingProposal = () => {
     if (!existingProposal) return null
 
-    const isRejected = existingProposal.status === 'Rejected'
-    const isPending = existingProposal.status === 'Pending HDC Review'
+    const isRejected = existingProposal.status === 'Rejected' || 
+                   existingProposal.status === 'Revision Required'
+    const isPending = existingProposal.status === 'Pending HDC Review' || 
+                  existingProposal.status === 'Pending Supervisor Review' ||
+                  existingProposal.status === 'Pending'
     const isApproved = existingProposal.status === 'Approved'
 
     return (
@@ -153,10 +155,29 @@ function ProposalUpload() {
         <p style={{ fontSize: '13px', color: '#333', marginBottom: '5px' }}>
           <strong>Submitted:</strong> {new Date(existingProposal.submitted_at).toLocaleDateString()}
         </p>
-        {existingProposal.hdc_comments && (
+      {existingProposal.hdc_comments && (
           <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px' }}>
             <strong>HDC Comments:</strong> {existingProposal.hdc_comments}
           </p>
+        )}
+
+        {/* Supervisor's feedback - full rejection reason, handles long text */}
+        {isRejected && existingProposal.supervisor_comments && (
+          <div style={{
+            backgroundColor: 'white',
+            border: '1px solid #ef9a9a',
+            borderLeft: '4px solid #c62828',
+            borderRadius: '6px',
+            padding: '14px 16px',
+            margin: '12px 0'
+          }}>
+            <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#c62828', margin: '0 0 6px 0', letterSpacing: '0.5px' }}>
+              SUPERVISOR'S FEEDBACK
+            </p>
+            <p style={{ fontSize: '13px', color: '#333333', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {existingProposal.supervisor_comments}
+            </p>
+          </div>
         )}
 
         {/* Resubmit button only if rejected */}
@@ -181,19 +202,97 @@ function ProposalUpload() {
           </button>
         )}
 
-        {/* If approved — no resubmission needed */}
-        {isApproved && (
-          <p style={{ fontSize: '13px', color: '#2e7d32', marginTop: '5px' }}>
-            Your proposal has been approved. You may proceed with your research.
-          </p>
-        )}
+      {/* If approved — show ethics upload */}
+{isApproved && (
+  <div style={{ marginTop: '15px' }}>
+    <p style={{ fontSize: '13px', color: '#2e7d32', marginBottom: '10px' }}>
+      ✅ Your proposal has been approved. Please submit your ethics clearance form.
+    </p>
+
+    {/* Ethics status */}
+    {existingProposal.ethics_status === 'Submitted' ? (
+      <div style={{
+        backgroundColor: '#e6f4ea', border: '1px solid #4caf50',
+        padding: '12px', borderRadius: '6px', fontSize: '13px', color: '#2e7d32'
+      }}>
+        ✅ Ethics clearance submitted successfully!
+      </div>
+    ) : (
+      <div>
+        <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px' }}>
+          Please download the ethics form, fill it in, get it signed and upload it below.
+        </p>
+
+        {/* Ethics file upload */}
+        <input
+          type="file"
+          accept=".pdf"
+          onChange={async (e) => {
+            const ethicsFile = e.target.files[0]
+            if (!ethicsFile) return
+            if (ethicsFile.type !== 'application/pdf') {
+              alert('Only PDF files are allowed.')
+              return
+            }
+
+            try {
+              // Upload file
+              const formData = new FormData()
+              formData.append('file', ethicsFile)
+
+              const uploadRes = await fetch('http://localhost:5000/api/uploads/file', {
+                method: 'POST',
+                body: formData
+              })
+              const uploadData = await uploadRes.json()
+
+              if (!uploadRes.ok) {
+                alert(uploadData.message)
+                return
+              }
+
+              // Save ethics file
+              const response = await fetch(
+                `http://localhost:5000/api/proposals/ethics/${existingProposal.id}`,
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fileName: uploadData.fileName })
+                }
+              )
+
+              const data = await response.json()
+              if (!response.ok) { alert(data.message); return }
+
+              alert('Ethics clearance submitted successfully!')
+              // Refresh page
+              window.location.reload()
+
+            } catch (err) {
+              alert('Could not upload file.')
+              console.error(err)
+            }
+          }}
+          style={{
+            width: '100%', padding: '10px',
+            border: '1px solid #cccccc', borderRadius: '4px',
+            fontSize: '14px', marginTop: '5px'
+          }}
+        />
+      </div>
+    )}
+  </div>
+)}
 
         {/* If pending — no action needed */}
-        {isPending && (
-          <p style={{ fontSize: '13px', color: '#e65100', marginTop: '5px' }}>
-            Your proposal is currently under HDC review. Please wait for feedback.
-          </p>
-        )}
+       {isPending && (
+  <p style={{ fontSize: '13px', color: '#e65100', marginTop: '5px' }}>
+    {existingProposal.status === 'Pending Supervisor Review' || existingProposal.status === 'Pending'
+      ? 'Your proposal is currently under supervisor review. Please wait for feedback.'
+      : 'Your proposal has been approved by your supervisor and is awaiting HDC review.'
+    }
+  </p>
+)}
       </div>
     )
   }
@@ -216,7 +315,7 @@ function ProposalUpload() {
             {isResubmitting ? 'Resubmit Research Proposal' : 'Research Proposal Submission'}
           </h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
-            {user.degree} Student — Faculty of Computing and Informatics
+             {user.programme_name || 'Namibia University of Science and Technology'} - {user.degree} Student
           </p>
         </div>
 
@@ -254,7 +353,7 @@ function ProposalUpload() {
                 fontSize: '13px',
                 color: '#e65100'
               }}>
-                ⚠️ You are resubmitting your proposal. Please address the HDC comments before resubmitting.
+               ⚠️ You are resubmitting your proposal. Please review the feedback above and address it before resubmitting.
               </div>
             )}
 
@@ -373,8 +472,8 @@ function ProposalUpload() {
               fontSize: '13px',
               color: '#e65100'
             }}>
-              ⚠️ <strong>Note:</strong> Your proposal will be reviewed by the HDC committee.
-              You will be notified of the outcome by your HOD.
+        ⚠️ <strong>Note:</strong> Your proposal goes to your supervisor for review first.
+              Once they approve it, it is forwarded to the HDC committee. You will be notified of the outcome.
             </div>
 
             {/* Submit button */}
@@ -413,7 +512,7 @@ function ProposalUpload() {
               ✅ Proposal {isResubmitting ? 'Resubmitted' : 'Submitted'} Successfully!
             </h2>
             <p style={{ color: '#333', marginBottom: '20px' }}>
-              Status: <strong>Pending HDC Review</strong>
+              Status: <strong>Pending Supervisor Review</strong>
             </p>
             <button
               onClick={() => navigate('/student')}

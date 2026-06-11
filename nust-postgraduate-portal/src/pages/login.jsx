@@ -1,12 +1,11 @@
 // src/pages/Login.jsx
 // useNavigate lets us redirect to another page
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 // Import useAuth so we can call the login function
 import { useAuth } from '../context/AuthContext'
 
-// Our fake user database
-import fakeUsers from '../utils/fakeUsers'
+
 
 
 function Login() {
@@ -18,6 +17,56 @@ function Login() {
   const navigate = useNavigate()
   // Get the login function from our AuthContext
   const { login } = useAuth()
+
+  // Demo accounts for quick-fill during presentation (seed data only)
+  const demoAccounts = [
+    { label: 'CS — Masters Student', email: '222012345@nust.na', password: 'student123' },
+    { label: 'CS — PhD Student', email: '221098765@nust.na', password: 'phd123' },
+    { label: 'CS — HOD', email: 'joel.eelu@nust.na', password: 'hod123' },
+    { label: 'CS — Coordinator', email: 'coordinator@nust.na', password: 'coord123' },
+    { label: 'CS — Supervisor', email: 'fili.nghidengwa@nust.na', password: 'supervisor123' },
+    { label: 'Civil — PhD Student', email: '223009988@nust.na', password: 'student123' },
+    { label: 'Civil — HOD', email: 'civil.hod@nust.na', password: 'hod123' },
+    { label: 'Civil — Coordinator', email: 'civil.coordinator@nust.na', password: 'coord123' },
+    { label: 'Civil — Supervisor', email: 'civil.supervisor@nust.na', password: 'supervisor123' },
+    { label: 'CS - Co-Supervisor', email: 'anna.shilongo@nust.na', password: 'supervisor123' },
+    { label: 'Admin / Secretary', email: 'mary.admin@nust.na', password: 'demo123' },
+    { label: 'Undergraduate (limited)', email: '224567890@nust.na', password: 'demo123' },
+    { label: 'Junior Lecturer (limited)', email: 'john.junior@nust.na', password: 'demo123' }
+  ]
+
+  // Examiners are created dynamically, so fetch them from the database
+  const [dbExaminers, setDbExaminers] = useState([])
+
+  useEffect(() => {
+    const fetchExaminers = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/auth/demo-examiners')
+        setDbExaminers(await res.json())
+      } catch (err) {
+        console.error('Error fetching examiners:', err)
+      }
+    }
+    fetchExaminers()
+  }, [])
+
+  // Map DB examiners into dropdown options (label shows email + password)
+  const examinerAccounts = dbExaminers.map(ex => ({
+    label: ex.name + ' — External Examiner ' + (ex.department_name ? ' (' + ex.department_name + ')' : ''),
+    email: ex.email,
+    password: ex.password
+  }))
+
+  // Combine hardcoded seed accounts with fetched examiner accounts
+  const allAccounts = [...demoAccounts, ...examinerAccounts]
+
+  const handleDemoSelect = (e) => {
+    const selected = allAccounts.find(a => a.email === e.target.value)
+    if (selected) {
+      setEmail(selected.email)
+      setPassword(selected.password)
+    }
+  }
 
  const handleLogin = async () => {
 
@@ -54,15 +103,21 @@ function Login() {
     login(data.user)
 
     // Redirect based on role
-    if (data.user.role === 'student') {
-      navigate('/student')
-    } else if (data.user.role === 'hod') {
-      navigate('/hod')
-    } else if (data.user.role === 'supervisor') {
-      navigate('/supervisor')
-    } else if (data.user.role === 'examiner') {
-      navigate('/examiner')
-    }
+if (data.user.role === 'student') {
+  navigate('/student')
+} else if (data.user.role === 'hod') {
+  navigate('/hod')
+} else if (data.user.role === 'supervisor') {
+  navigate('/supervisor')
+} else if (data.user.role === 'examiner') {
+  navigate('/examiner')
+} else if (data.user.role === 'coordinator') {
+  navigate('/coordinator')
+} else if (data.user.role === 'admin_staff') {
+  navigate('/admin')
+} else {
+  navigate('/dashboard')
+}
 
   } catch (err) {
     alert('Could not connect to server. Please try again.')
@@ -94,9 +149,12 @@ function Login() {
         <h1 style={{ color: '#002147', fontSize: '20px' }}>
           NAMIBIA UNIVERSITY OF SCIENCE AND TECHNOLOGY
         </h1>
-        <h2 style={{ color: '#8B0000', fontSize: '16px', marginTop: '5px' }}>
+       <h2 style={{ color: '#8B0000', fontSize: '16px', marginTop: '5px' }}>
           Postgraduate Research Portal
         </h2>
+        <p style={{ color: '#888888', fontSize: '12px', marginTop: '8px' }}>
+          Sign in with your NUST credentials
+        </p>
         <hr style={{ marginTop: '15px', borderColor: '#002147' }} />
       </div>
 
@@ -166,15 +224,37 @@ function Login() {
         }}>
         Login
       </button>
+      {/* Demo account quick-fill (development only) */}
+      <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed #cccccc' }}>
+        <label style={{ display: 'block', fontSize: '12px', color: '#888888', marginBottom: '6px' }}>
+          Demo account quick-fill (development only)
+        </label>
+        <select
+          onChange={handleDemoSelect}
+          defaultValue=""
+          style={{
+            width: '100%', padding: '8px',
+            border: '1px solid #cccccc', borderRadius: '4px',
+            fontSize: '13px', backgroundColor: 'white'
+          }}>
+          <option value="">-- Select a demo account --</option>
+        {allAccounts.map(a => (
+            <option key={a.email} value={a.email}>{a.label}</option>
+          ))}
+        </select>
+        <p style={{ fontSize: '11px', color: '#aaaaaa', marginTop: '6px' }}>
+          In production, all users sign in via NUST SSO. These are seed accounts for demonstration only.
+        </p>
+      </div>
 
-      {/* Footer note */}
+    {/* Footer note */}
       <p style={{
         textAlign: 'center',
         marginTop: '20px',
         fontSize: '12px',
         color: '#888888'
       }}>
-        Faculty of Computing and Informatics
+        For all NUST postgraduate students and staff
       </p>
 
     </div>

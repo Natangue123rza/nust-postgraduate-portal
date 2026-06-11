@@ -3,10 +3,12 @@ import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import { useAuth } from '../../context/AuthContext'
 
 function AssignExaminers() {
 
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   // Students and examiners from database
   const [students, setStudents] = useState([])
@@ -24,27 +26,34 @@ function AssignExaminers() {
   const [loading, setLoading] = useState(true)
 
   // Fetch students and examiners from database
-  useEffect(() => {
+useEffect(() => {
   const fetchData = async () => {
     try {
-      const studentsRes = await fetch('http://localhost:5000/api/auth/students')
-      const studentsData = await studentsRes.json()
-      setStudents(studentsData)
+    // Only show students whose thesis the supervisor has APPROVED (ready for examiners)
+      const thesesRes = await fetch(
+        'http://localhost:5000/api/theses/all?departmentId=' + user.department_id
+      )
+      const approvedTheses = await thesesRes.json()
+      const studentsFromTheses = approvedTheses.map(t => ({
+        id: t.student_id,
+        name: t.student_name,
+        degree: t.degree
+      }))
+      setStudents(studentsFromTheses)
 
-      const examinersRes = await fetch('http://localhost:5000/api/auth/examiners')
-      const examinersData = await examinersRes.json()
-      setExaminers(examinersData)
-
-      setLoading(false)
-
+      // Only fetch examiners from the HOD's own department
+      const examinersRes = await fetch(
+        `http://localhost:5000/api/auth/examiners?departmentId=${user.department_id}`
+      )
+      setExaminers(await examinersRes.json())
     } catch (err) {
       console.error('Error fetching data:', err)
+    } finally {
       setLoading(false)
     }
   }
-
   fetchData()
-}, [])
+}, [user.department_id])
 
   const handleSelectStudent = (student) => {
     setSelectedStudent(student)
@@ -56,14 +65,14 @@ function AssignExaminers() {
   const handleAssign = async () => {
 
     if (!internalExaminer) {
-      alert('Please select an internal examiner.')
-      return
-    }
+  alert('Please select External Examiner 1.')
+  return
+}
 
-    if (selectedStudent.degree === 'PhD' && !externalExaminer) {
-      alert('PhD students require both an internal and external examiner.')
-      return
-    }
+if (selectedStudent.degree === 'PhD' && !externalExaminer) {
+  alert('PhD students require 2 external examiners.')
+  return
+}
 
     try {
 
@@ -90,7 +99,7 @@ function AssignExaminers() {
 
       setAssigned(true)
 
-      // Notify internal examiner
+      // Notify external examiner
       if (internalExaminerObj) {
         await fetch('http://localhost:5000/api/notifications/create', {
           method: 'POST',
@@ -98,7 +107,7 @@ function AssignExaminers() {
           body: JSON.stringify({
             userId: internalExaminerObj.id,
             title: 'New Student Assigned',
-            message: `You have been assigned as internal examiner for ${selectedStudent.name} (${selectedStudent.degree}). Please log in to submit your evaluation.`
+            message: `You have been assigned as external examiner for ${selectedStudent.name} (${selectedStudent.degree}). Please log in to submit your evaluation.`
           })
         })
       }
@@ -209,7 +218,21 @@ function AssignExaminers() {
                 {student.degree}
               </span>
             </div>
-          ))}
+        ))}
+
+          {!loading && students.length === 0 && (
+            <div style={{
+              backgroundColor: '#fff3e0',
+              border: '1px solid #ff9800',
+              padding: '20px',
+              borderRadius: '8px',
+              color: '#e65100',
+              fontSize: '14px',
+              width: '100%'
+            }}>
+              ⏳ No theses are ready for examiner assignment yet. A student appears here only once their supervisor has reviewed and approved the thesis.
+            </div>
+          )}
         </div>
 
         {/* Examiner assignment form */}
@@ -238,75 +261,90 @@ function AssignExaminers() {
               paddingLeft: '14px'
             }}>
               {selectedStudent.degree === 'Masters'
-                ? '⚠️ Masters student — requires 1 internal examiner only'
-                : '⚠️ PhD student — requires 1 internal AND 1 external examiner'
-              }
+  ? '⚠️ Masters student — requires 1 external examiner (supervisor is internal examiner)'
+  : '⚠️ PhD student — requires 2 external examiners (supervisor is internal examiner)'
+}
             </p>
 
-            {/* Internal Examiner Dropdown */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                fontWeight: 'bold',
-                color: '#002147',
-                marginBottom: '6px'
-              }}>
-                Internal Examiner: *
-              </label>
-              <select
-                value={internalExaminer}
-                onChange={(e) => setInternalExaminer(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #cccccc',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  backgroundColor: 'white'
-                }}>
-                <option value="">-- Select Internal Examiner --</option>
-                {examiners.map(examiner => (
-                  <option key={examiner.id} value={examiner.name}>
-                    {examiner.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Note about supervisor */}
+<div style={{
+  backgroundColor: '#f0f7ff',
+  border: '1px solid #002147',
+  padding: '12px 15px',
+  borderRadius: '6px',
+  marginBottom: '20px',
+  fontSize: '13px',
+  color: '#002147'
+}}>
+  ℹ️ <strong>Note:</strong> The student's supervisor is automatically 
+  assigned as the <strong>Internal Examiner</strong>.
+  Please assign the external examiner(s) below.
+</div>
 
-            {/* External Examiner Dropdown - PhD only */}
-            {selectedStudent.degree === 'PhD' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  fontWeight: 'bold',
-                  color: '#002147',
-                  marginBottom: '6px'
-                }}>
-                  External Examiner: *
-                </label>
-                <select
-                  value={externalExaminer}
-                  onChange={(e) => setExternalExaminer(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #cccccc',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    backgroundColor: 'white'
-                  }}>
-                  <option value="">-- Select External Examiner --</option>
-                  {examiners
-                    .filter(examiner => examiner.name !== internalExaminer)
-                    .map(examiner => (
-                      <option key={examiner.id} value={examiner.name}>
-                        {examiner.name}
-                      </option>
-                    ))
-                  }
-                </select>
-              </div>
-            )}
+{/* External Examiner 1 - always required */}
+<div style={{ marginBottom: '20px' }}>
+  <label style={{
+    display: 'block',
+    fontWeight: 'bold',
+    color: '#002147',
+    marginBottom: '6px'
+  }}>
+    External Examiner 1: *
+  </label>
+  <select
+    value={internalExaminer}
+    onChange={(e) => setInternalExaminer(e.target.value)}
+    style={{
+      width: '100%',
+      padding: '10px',
+      border: '1px solid #cccccc',
+      borderRadius: '4px',
+      fontSize: '14px',
+      backgroundColor: 'white'
+    }}>
+    <option value="">-- Select External Examiner 1 --</option>
+    {examiners.map(examiner => (
+      <option key={examiner.id} value={examiner.name}>
+        {examiner.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* External Examiner 2 - only for PhD */}
+{selectedStudent.degree === 'PhD' && (
+  <div style={{ marginBottom: '20px' }}>
+    <label style={{
+      display: 'block',
+      fontWeight: 'bold',
+      color: '#002147',
+      marginBottom: '6px'
+    }}>
+      External Examiner 2: *
+    </label>
+    <select
+      value={externalExaminer}
+      onChange={(e) => setExternalExaminer(e.target.value)}
+      style={{
+        width: '100%',
+        padding: '10px',
+        border: '1px solid #cccccc',
+        borderRadius: '4px',
+        fontSize: '14px',
+        backgroundColor: 'white'
+      }}>
+      <option value="">-- Select External Examiner 2 --</option>
+      {examiners
+        .filter(examiner => examiner.name !== internalExaminer)
+        .map(examiner => (
+          <option key={examiner.id} value={examiner.name}>
+            {examiner.name}
+          </option>
+        ))
+      }
+    </select>
+  </div>
+)}
 
             {/* Success message */}
             {assigned && (

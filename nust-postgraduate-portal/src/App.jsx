@@ -31,6 +31,13 @@ import ViewProposals from './pages/supervisor/ViewProposals'
 import ViewTheses from './pages/supervisor/ViewTheses'
 import ManageResults from './pages/hod/ManageResults'
 import AssignSupervisor from './pages/hod/AssignSupervisor'
+import ReviewSubmissions from './pages/supervisor/ReviewSubmissions'
+import GradeThesis from './pages/supervisor/GradeThesis'
+import DefaultDashboard from './pages/DefaultDashboard'
+import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard'
+import CoordinatorAssignSupervisor from './pages/coordinator/AssignSupervisor'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import ManageExaminers from './pages/admin/ManageExaminers'
 
 
 
@@ -183,6 +190,55 @@ function App() {
 <Route path="/hod/assign-supervisor" element={
   <ProtectedRoute allowedRoles={['hod']}>
     <AssignSupervisor />
+  </ProtectedRoute>
+} />
+
+{/* Supervisor Review Submissions */}
+<Route path="/supervisor/review" element={
+  <ProtectedRoute allowedRoles={['supervisor']}>
+    <ReviewSubmissions />
+  </ProtectedRoute>
+} />
+
+{/* Supervisor Grade Thesis */}
+<Route path="/supervisor/grade" element={
+  <ProtectedRoute allowedRoles={['supervisor']}>
+    <GradeThesis />
+  </ProtectedRoute>
+} />
+
+{/* Default dashboard for non-postgraduate users */}
+<Route path="/dashboard" element={
+  <ProtectedRoute allowedRoles={['undergraduate', 'junior_lecturer', 'admin_staff']}>
+    <DefaultDashboard />
+  </ProtectedRoute>
+} />
+
+{/* Coordinator dashboard */}
+<Route path="/coordinator" element={
+  <ProtectedRoute allowedRoles={['coordinator']}>
+    <CoordinatorDashboard />
+  </ProtectedRoute>
+} />
+
+{/* Coordinator assign supervisor */}
+<Route path="/coordinator/assign-supervisor" element={
+  <ProtectedRoute allowedRoles={['coordinator']}>
+    <CoordinatorAssignSupervisor />
+  </ProtectedRoute>
+} />
+
+{/* Admin dashboard */}
+<Route path="/admin" element={
+  <ProtectedRoute allowedRoles={['admin_staff']}>
+    <AdminDashboard />
+  </ProtectedRoute>
+} />
+
+{/* Admin manage examiners */}
+<Route path="/admin/examiners" element={
+  <ProtectedRoute allowedRoles={['admin_staff']}>
+    <ManageExaminers />
   </ProtectedRoute>
 } />
 

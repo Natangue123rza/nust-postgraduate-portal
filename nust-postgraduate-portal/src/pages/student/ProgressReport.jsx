@@ -25,20 +25,33 @@ const [risks, setRisks] = useState('')
 const [studentComments, setStudentComments] = useState('')
 const [activeSemester, setActiveSemester] = useState('')
 const [deadlinePassed, setDeadlinePassed] = useState(false)
+const [reportNumber, setReportNumber] = useState(1)
+const [canSubmit, setCanSubmit] = useState(true)
+const [blockMessage, setBlockMessage] = useState('')
 
 // Fetch active semester when page loads
 useEffect(() => {
-  const fetchActivePeriod = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/periods/active')
-      const data = await response.json()
-      if (response.ok) {
-        setActiveSemester(`${data.semester} — ${data.academic_year}`)
-      }
-    } catch (err) {
-      console.error('Error fetching period:', err)
+const fetchActivePeriod = async () => {
+  try {
+    // First try auto-detect
+    const detectRes = await fetch('http://localhost:5000/api/periods/detect')
+    const detectData = await detectRes.json()
+
+    if (detectRes.ok) {
+      setActiveSemester(`${detectData.semester} — ${detectData.academic_year}`)
+      return
     }
+
+    // Fallback to manual active period
+    const response = await fetch('http://localhost:5000/api/periods/active')
+    const data = await response.json()
+    if (response.ok) {
+      setActiveSemester(`${data.semester} — ${data.academic_year}`)
+    }
+  } catch (err) {
+    console.error('Error fetching period:', err)
   }
+}
 
   const fetchDeadline = async () => {
     try {
@@ -54,12 +67,40 @@ useEffect(() => {
     }
   }
 
+const fetchReportStatus = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/progress/student/' + user.id)
+      const reports = await res.json()
+
+      // Any report still awaiting supervisor review?
+      const pending = reports.filter(r => !r.supervisor_comments || r.supervisor_comments === '')
+
+      if (pending.length > 0) {
+        const pendingNum = pending[0].report_number || reports.length
+        setReportNumber(pendingNum)
+        setCanSubmit(false)
+        setBlockMessage('Your Progress Report ' + pendingNum + ' is still awaiting supervisor review. You can submit your next report once it has been reviewed.')
+      } else {
+        setReportNumber(reports.length + 1)
+        setCanSubmit(true)
+      }
+    } catch (err) {
+      console.error('Error fetching report status:', err)
+    }
+  }
+
   fetchActivePeriod()
   fetchDeadline()
-}, [])
+  fetchReportStatus()
+}, [user.id])
 
  const handleSubmit = async () => {
 
+  // Block if previous report not yet reviewed
+  if (!canSubmit) {
+    alert(blockMessage)
+    return
+  }
 
   // Check required fields
   if (!researchProblem || !objectives || !activitiesCompleted) {
@@ -88,8 +129,9 @@ if (!activeSemester) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        studentId: user.id,
+       studentId: user.id,
         semester: activeSemester,
+        reportNumber,
         researchProblem,
         objectives,
         activitiesCompleted,
@@ -146,7 +188,7 @@ if (!activeSemester) {
             Postgraduate Research Progress Report
           </h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
-            Faculty of Computing and Informatics — {user.degree} Student
+             {user.programme_name || 'Namibia University of Science and Technology'} — {user.degree} Student
           </p>
         </div>
 
@@ -163,8 +205,42 @@ if (!activeSemester) {
             fontSize: '13px',
             cursor:"pointer"
           }}>
-          ← Back to Dashboard
+      ← Back to Dashboard
         </button>
+
+        {/* Report number banner */}
+        <div style={{
+          backgroundColor: '#8B0000',
+          color: 'white',
+          padding: '15px 20px',
+          borderRadius: '8px',
+          marginBottom: '20px'
+        }}>
+          <p style={{ margin: 0, fontSize: '12px', color: '#ffcccc' }}>
+            You are submitting
+          </p>
+          <p style={{ margin: '3px 0 0 0', fontSize: '20px', fontWeight: 'bold' }}>
+            Progress Report {reportNumber}
+          </p>
+          <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#ffcccc' }}>
+            {activeSemester}
+          </p>
+        </div>
+
+        {/* Block message if previous report not reviewed */}
+        {!canSubmit && (
+          <div style={{
+            backgroundColor: '#fff3e0',
+            border: '1px solid #ff9800',
+            padding: '15px 20px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            color: '#e65100',
+            fontSize: '14px'
+          }}>
+            ⏳ {blockMessage}
+          </div>
+        )}
 
         {/* SECTION 1 - Research Problem */}
         <div style={{
@@ -229,7 +305,9 @@ if (!activeSemester) {
             }}
           />
 
-          {/* SECTION 3 - Evaluation */}
+          </div>
+
+        {/* SECTION 3 - Evaluation */}
        
 
 <div style={{
@@ -485,23 +563,25 @@ if (!activeSemester) {
 {/* Submit button - disabled if deadline passed */}
 <button
   onClick={handleSubmit}
-  disabled={deadlinePassed}
+  disabled={deadlinePassed || !canSubmit}
   style={{
     width: '100%',
     padding: '14px',
-    backgroundColor: deadlinePassed ? '#cccccc' : '#002147',
+    backgroundColor: (deadlinePassed || !canSubmit) ? '#cccccc' : '#002147',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
     fontSize: '16px',
     fontWeight: 'bold',
     marginBottom: '30px',
-    cursor: deadlinePassed ? 'not-allowed' : 'pointer'
+    cursor: (deadlinePassed || !canSubmit) ? 'not-allowed' : 'pointer'
   }}>
-  {deadlinePassed ? '❌ Submission Deadline Has Passed' : 'Submit Progress Report'}
+  {deadlinePassed
+    ? '❌ Submission Deadline Has Passed'
+    : !canSubmit
+    ? '⏳ Awaiting Review of Previous Report'
+    : 'Submit Progress Report ' + reportNumber}
 </button>
-
-        </div>
 
       </div>
       

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 function HDCDecision() {
 
@@ -12,22 +13,25 @@ function HDCDecision() {
   const [decision, setDecision] = useState('')
   const [comments, setComments] = useState('')
   const [saving, setSaving] = useState(false)
+  const { user } = useAuth()
 
-  // Fetch all proposals from database
-  useEffect(() => {
-    const fetchProposals = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/proposals/all')
-        const data = await response.json()
-        setProposals(data)
-      } catch (err) {
-        console.error('Error fetching proposals:', err)
-      } finally {
-        setLoading(false)
-      }
+ // Fetch all proposals from database
+useEffect(() => {
+  const fetchProposals = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/proposals/all?departmentId=${user.department_id}`
+      )
+      const data = await response.json()
+      setProposals(data)
+    } catch (err) {
+      console.error('Error fetching proposals:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchProposals()
-  }, [])
+  }
+  fetchProposals()
+}, [user.department_id])
 
   const handleSaveDecision = async () => {
 
@@ -225,6 +229,21 @@ function HDCDecision() {
                 </span>
               </div>
             </div>
+
+            {/* Supervisor comments */}
+{proposal.supervisor_comments && (
+  <div style={{
+    backgroundColor: '#f0f7ff',
+    border: '1px solid #002147',
+    padding: '10px',
+    borderRadius: '4px',
+    fontSize: '13px',
+    color: '#333',
+    marginBottom: '8px'
+  }}>
+    <strong>Supervisor Comments:</strong> {proposal.supervisor_comments}
+  </div>
+)}
 
             {/* Existing HDC comments */}
             {proposal.hdc_comments && (

@@ -8,6 +8,8 @@ function StudentDashboard() {
 
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [currentPeriod, setCurrentPeriod] = useState(null)
+  const [supervisionTeam, setSupervisionTeam] = useState(null)
 
   // Deadlines fetched from database
   const [deadlines, setDeadlines] = useState({
@@ -31,6 +33,34 @@ function StudentDashboard() {
     }
     fetchDeadlines()
   }, [])
+
+  // Fetch current semester
+useEffect(() => {
+  const fetchPeriod = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/periods/detect')
+      const data = await res.json()
+      setCurrentPeriod(data)
+    } catch (err) {
+      console.error('Error fetching period:', err)
+    }
+  }
+  fetchPeriod()
+}, [])
+
+useEffect(() => {
+  const fetchTeam = async () => {
+    try {
+      const res = await fetch(
+        'http://localhost:5000/api/auth/my-supervisors/' + user.id
+      )
+      setSupervisionTeam(await res.json())
+    } catch (err) {
+      console.error('Error fetching supervision team:', err)
+    }
+  }
+  fetchTeam()
+}, [user.id])
 
   // Calculate time remaining for a deadline
   const getTimeRemaining = (deadlineDate) => {
@@ -84,9 +114,122 @@ function StudentDashboard() {
             Welcome, {user.name}
           </h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '14px' }}>
-            {user.degree} Student — Faculty of Computing and Informatics
+           {user.programme_name || 'Namibia University of Science and Technology'} - {user.degree} Student
           </p>
         </div>
+
+        {currentPeriod && (
+  <div style={{
+    backgroundColor: '#f0f7ff',
+    border: '1px solid #002147',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    marginBottom: '20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '13px'
+  }}>
+    <span style={{ color: '#002147' }}>
+      📅 <strong>{currentPeriod.semester} — {currentPeriod.academic_year}</strong>
+    </span>
+    <span style={{ color: '#666' }}>
+      Ends: {currentPeriod.end_date}
+    </span>
+  </div>
+)}
+
+{supervisionTeam && supervisionTeam.supervisor_name && (
+  <div style={{
+    backgroundColor: 'white',
+    border: '1px solid #dddddd',
+    borderLeft: '4px solid #002147',
+    padding: '20px 25px',
+    borderRadius: '8px',
+    marginBottom: '25px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+  }}>
+    <h3 style={{ color: '#002147', marginBottom: '16px', fontSize: '15px' }}>
+      👥 Your Supervision Team
+    </h3>
+
+    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+
+      {/* Main Supervisor */}
+      <div style={{
+        flex: 1, minWidth: '240px', display: 'flex', gap: '12px',
+        alignItems: 'flex-start', backgroundColor: '#f8f9fb',
+        borderRadius: '8px', padding: '14px 16px'
+      }}>
+        <div style={{
+          width: '44px', height: '44px', borderRadius: '50%',
+          backgroundColor: '#002147', color: 'white', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 'bold', fontSize: '15px'
+        }}>
+          {supervisionTeam.supervisor_name.split(' ').map(w => w.charAt(0)).slice(0, 2).join('').toUpperCase()}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontSize: '11px', color: '#8B0000', fontWeight: 'bold', margin: '0 0 2px 0', letterSpacing: '0.5px' }}>
+            MAIN SUPERVISOR
+          </p>
+          <p style={{ fontSize: '14px', color: '#002147', fontWeight: 'bold', margin: '0 0 4px 0' }}>
+            {supervisionTeam.supervisor_name}
+          </p>
+          {supervisionTeam.supervisor_email && (
+            <a href={'mailto:' + supervisionTeam.supervisor_email}
+               style={{ fontSize: '12px', color: '#1976d2', textDecoration: 'none', display: 'block', wordBreak: 'break-all' }}>
+              ✉️ {supervisionTeam.supervisor_email}
+            </a>
+          )}
+          {supervisionTeam.supervisor_department && (
+            <p style={{ fontSize: '12px', color: '#666666', margin: '4px 0 0 0' }}>
+              🏛️ {supervisionTeam.supervisor_department}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Co-Supervisor */}
+      {supervisionTeam.co_supervisor_name && (
+        <div style={{
+          flex: 1, minWidth: '240px', display: 'flex', gap: '12px',
+          alignItems: 'flex-start', backgroundColor: '#f8f9fb',
+          borderRadius: '8px', padding: '14px 16px'
+        }}>
+          <div style={{
+            width: '44px', height: '44px', borderRadius: '50%',
+            backgroundColor: '#8B0000', color: 'white', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 'bold', fontSize: '15px'
+          }}>
+            {supervisionTeam.co_supervisor_name.split(' ').map(w => w.charAt(0)).slice(0, 2).join('').toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: '11px', color: '#8B0000', fontWeight: 'bold', margin: '0 0 2px 0', letterSpacing: '0.5px' }}>
+              CO-SUPERVISOR
+            </p>
+            <p style={{ fontSize: '14px', color: '#002147', fontWeight: 'bold', margin: '0 0 4px 0' }}>
+              {supervisionTeam.co_supervisor_name}
+            </p>
+            {supervisionTeam.co_supervisor_email && (
+              <a href={'mailto:' + supervisionTeam.co_supervisor_email}
+                 style={{ fontSize: '12px', color: '#1976d2', textDecoration: 'none', display: 'block', wordBreak: 'break-all' }}>
+                ✉️ {supervisionTeam.co_supervisor_email}
+              </a>
+            )}
+            {supervisionTeam.co_supervisor_department && (
+              <p style={{ fontSize: '12px', color: '#666666', margin: '4px 0 0 0' }}>
+                🏛️ {supervisionTeam.co_supervisor_department}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+    </div>
+  </div>
+)}
 
         {/* Section title */}
         <h2 style={{

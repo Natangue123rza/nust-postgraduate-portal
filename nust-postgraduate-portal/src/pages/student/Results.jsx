@@ -114,7 +114,7 @@ function Results() {
         }}>
           <h1 style={{ margin: 0, fontSize: '20px' }}>My Results & Status</h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
-            {user.degree} Student — Faculty of Computing and Informatics
+              {user.programme_name || 'Namibia University of Science and Technology'} - {user.degree} Student
           </p>
         </div>
 

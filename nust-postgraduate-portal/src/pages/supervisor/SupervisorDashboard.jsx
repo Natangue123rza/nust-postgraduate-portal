@@ -1,18 +1,58 @@
-// src/pages/supervisor/supervisorDashboard.jsx
-import Navbar from "../../components/Navbar";
-import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-
-
+// src/pages/supervisor/SupervisorDashboard.jsx
+import Navbar from '../../components/Navbar'
+import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 
 function SupervisorDashboard() {
 
-    const { user } = useAuth()
-    const navigate = useNavigate()
- 
-    return(
-  
-       <div>
+  const { user } = useAuth()
+  const navigate = useNavigate()
+ const [assignedStudents, setAssignedStudents] = useState([])
+  const [coSupervised, setCoSupervised] = useState([])
+  const [pendingReviews, setPendingReviews] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Get assigned students
+        const studentsRes = await fetch(
+          `http://localhost:5000/api/auth/supervisor-students/${user.id}`
+        )
+      const students = await studentsRes.json()
+        setAssignedStudents(students)
+
+        // Students where this person is the CO-supervisor
+        const coRes = await fetch('http://localhost:5000/api/auth/co-supervisor-students/' + user.id)
+        setCoSupervised(await coRes.json())
+
+        // Count pending reviews
+        let pending = 0
+        for (const student of students) {
+          const [propRes, thesisRes] = await Promise.all([
+            fetch(`http://localhost:5000/api/proposals/student/${student.id}`),
+            fetch(`http://localhost:5000/api/theses/student/${student.id}`)
+          ])
+          const proposals = await propRes.json()
+          const theses = await thesisRes.json()
+
+          if (proposals.length > 0 && proposals[0].supervisor_status === 'Pending') pending++
+          if (theses.length > 0 && theses[0].supervisor_status === 'Pending') pending++
+        }
+        setPendingReviews(pending)
+
+      } catch (err) {
+        console.error('Error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [user.id])
+
+  return (
+    <div>
       <Navbar />
 
       <div style={{
@@ -33,119 +73,228 @@ function SupervisorDashboard() {
             Welcome, {user.name}
           </h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '14px' }}>
-            Supervisor — Faculty of Computing and Informatics
+           {user.faculty_name || 'Namibia University of Science and Technology'}
           </p>
         </div>
 
-        {/* Section title */}
+        {/* Summary stats */}
+        {!loading && (
+          <div style={{
+            display: 'flex',
+            gap: '15px',
+            marginBottom: '30px',
+            flexWrap: 'wrap'
+          }}>
+
+            {/* Assigned students */}
+            <div style={{
+              backgroundColor: 'white',
+              padding: '20px 25px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
+              flex: 1,
+              minWidth: '150px',
+              textAlign: 'center'
+            }}>
+              <p style={{ fontSize: '32px', fontWeight: 'bold', color: '#002147', margin: 0 }}>
+                {assignedStudents.length}
+              </p>
+              <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
+                Assigned Students
+              </p>
+            </div>
+
+            {/* Pending reviews */}
+            <div style={{
+              backgroundColor: pendingReviews > 0 ? '#fff3e0' : 'white',
+              padding: '20px 25px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
+              flex: 1,
+              minWidth: '150px',
+              textAlign: 'center',
+              border: pendingReviews > 0 ? '1px solid #ff9800' : '1px solid #dddddd'
+            }}>
+              <p style={{
+                fontSize: '32px', fontWeight: 'bold',
+                color: pendingReviews > 0 ? '#e65100' : '#002147',
+                margin: 0
+              }}>
+                {pendingReviews}
+              </p>
+              <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
+                Pending Reviews
+              </p>
+            </div>
+
+          </div>
+        )}
+
+        {/* No students assigned */}
+        {!loading && assignedStudents.length === 0 && (
+          <div style={{
+            backgroundColor: '#fff3e0',
+            border: '1px solid #ff9800',
+            padding: '20px',
+            borderRadius: '8px',
+            color: '#e65100',
+            fontSize: '14px',
+            marginBottom: '25px'
+          }}>
+            ⏳ No students assigned yet. You will be notified when the Postgraduate Coordinator assigns students to you.
+          </div>
+        )}
+
+       
+
+     {/* Students you co-supervise */}
+        {!loading && coSupervised.length > 0 && (
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px 25px',
+            borderRadius: '8px',
+            marginBottom: '30px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+          }}>
+            <h3 style={{
+              color: '#002147', marginBottom: '4px',
+              fontSize: '16px', borderLeft: '4px solid #8B0000', paddingLeft: '10px'
+            }}>
+              Students You Co-Supervise
+            </h3>
+            <p style={{ fontSize: '12px', color: '#666', marginBottom: '15px', paddingLeft: '14px' }}>
+              You support these students alongside their main supervisor
+            </p>
+            {coSupervised.map(student => (
+              <div key={student.id} style={{
+                display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', padding: '10px 0',
+                borderBottom: '1px solid #f0f0f0'
+              }}>
+                <div>
+                  <p style={{ fontWeight: 'bold', color: '#002147', marginBottom: '2px' }}>
+                    {student.name}
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#666' }}>
+                    Main supervisor: {student.main_supervisor_name || 'Not assigned'}
+                  </p>
+                </div>
+                <span style={{
+                  backgroundColor: student.degree === 'PhD' ? '#8B0000' : '#002147',
+                  color: 'white', padding: '3px 10px',
+                  borderRadius: '12px', fontSize: '11px'
+                }}>
+                  {student.degree}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Action cards */}
         <h2 style={{
-          color: '#002147',
-          marginBottom: '20px',
-          fontSize: '18px',
-          borderLeft: '4px solid #8B0000',
+          color: '#002147', marginBottom: '20px',
+          fontSize: '18px', borderLeft: '4px solid #8B0000',
           paddingLeft: '10px'
         }}>
           Supervisor Actions
         </h2>
 
-        {/* Cards */}
-        <div style={{
-          display: 'flex',
-          gap: '20px',
-          flexWrap: 'wrap'
-        }}>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
 
-          {/* View Students Card */}
+          {/* Review Submissions */}
           <div
-            onClick={() => navigate('/supervisor/students')}
+            onClick={() => navigate('/supervisor/review')}
             style={{
               backgroundColor: 'white',
               border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+              borderTop: `4px solid ${pendingReviews > 0 ? '#ff9800' : '#002147'}`,
+              padding: '25px', borderRadius: '8px',
+              cursor: 'pointer', width: '220px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
+              position: 'relative'
             }}>
+            {pendingReviews > 0 && (
+              <span style={{
+                position: 'absolute', top: '-8px', right: '-8px',
+                backgroundColor: '#ff9800', color: 'white',
+                borderRadius: '50%', width: '22px', height: '22px',
+                fontSize: '12px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                fontWeight: 'bold'
+              }}>
+                {pendingReviews}
+              </span>
+            )}
             <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              👥 My Students
+              🔍 Review Submissions
             </h3>
             <p style={{ fontSize: '13px', color: '#666666' }}>
-              View your assigned students and their progress
+              Review and approve student proposals and theses
             </p>
           </div>
 
-          {/* Progress Reports Card */}
+          {/* Progress Reports */}
           <div
             onClick={() => navigate('/supervisor/progress-reports')}
             style={{
               backgroundColor: 'white',
               border: '1px solid #dddddd',
               borderTop: '4px solid #002147',
-              padding: '25px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              width: '220px',
+              padding: '25px', borderRadius: '8px',
+              cursor: 'pointer', width: '220px',
               boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
             }}>
             <h3 style={{ color: '#002147', marginBottom: '10px' }}>
               📋 Progress Reports
             </h3>
             <p style={{ fontSize: '13px', color: '#666666' }}>
-              Review and respond to student progress reports
+              Review progress reports and add supervisor comments
             </p>
           </div>
 
-{/* View Proposals Card */}
-<div
-  onClick={() => navigate('/supervisor/proposals')}
-  style={{
-    backgroundColor: 'white',
-    border: '1px solid #dddddd',
-    borderTop: '4px solid #002147',
-    padding: '25px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    width: '220px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-  }}>
-  <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-    📄 Research Proposals
-  </h3>
-  <p style={{ fontSize: '13px', color: '#666666' }}>
-    View student research proposals
-  </p>
-</div>
+          {/* Grade Thesis */}
+          <div
+            onClick={() => navigate('/supervisor/grade')}
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #dddddd',
+              borderTop: '4px solid #8B0000',
+              padding: '25px', borderRadius: '8px',
+              cursor: 'pointer', width: '220px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+            }}>
+            <h3 style={{ color: '#8B0000', marginBottom: '10px' }}>
+              📝 Grade Thesis
+            </h3>
+          <p style={{ fontSize: '13px', color: '#666666' }}>
+              Submit your evaluation as internal examiner
+            </p>
+          </div>
 
-{/* View Theses Card */}
-<div
-  onClick={() => navigate('/supervisor/theses')}
-  style={{
-    backgroundColor: 'white',
-    border: '1px solid #dddddd',
-    borderTop: '4px solid #002147',
-    padding: '25px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    width: '220px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-  }}>
-  <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-    🎓 Thesis Submissions
-  </h3>
-  <p style={{ fontSize: '13px', color: '#666666' }}>
-    View student thesis submissions
-  </p>
-</div>
+          {/* My Students */}
+          <div
+            onClick={() => navigate('/supervisor/students')}
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #dddddd',
+              borderTop: '4px solid #002147',
+              padding: '25px', borderRadius: '8px',
+              cursor: 'pointer', width: '220px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+            }}>
+            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
+              👥 My Students
+            </h3>
+            <p style={{ fontSize: '13px', color: '#666666' }}>
+              View all your students and track their research progress
+            </p>
+          </div>
+
         </div>
       </div>
     </div>
-    )
-
+  )
 }
 
-
-
-// We export it so other files (like our router) can use it
-export default SupervisorDashboard;
+export default SupervisorDashboard

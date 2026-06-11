@@ -17,19 +17,19 @@ router.post('/assign', async (req, res) => {
       [studentId]
     )
 
-    // Insert internal examiner
-    await poolPromise.query(
-      'INSERT INTO examiner_assignments (student_id, examiner_id, examiner_type) VALUES (?, ?, ?)',
-      [studentId, internalExaminerId, 'internal']
-    )
+   // Insert External Examiner 1
+await poolPromise.query(
+  'INSERT INTO examiner_assignments (student_id, examiner_id, examiner_type) VALUES (?, ?, ?)',
+  [studentId, internalExaminerId, 'external']
+)
 
-    // Insert external examiner if PhD
-    if (externalExaminerId) {
-      await poolPromise.query(
-        'INSERT INTO examiner_assignments (student_id, examiner_id, examiner_type) VALUES (?, ?, ?)',
-        [studentId, externalExaminerId, 'external']
-      )
-    }
+// Insert External Examiner 2 if PhD
+if (externalExaminerId) {
+  await poolPromise.query(
+    'INSERT INTO examiner_assignments (student_id, examiner_id, examiner_type) VALUES (?, ?, ?)',
+    [studentId, externalExaminerId, 'external']
+  )
+}
 
     res.json({ message: 'Examiners assigned successfully!' })
 

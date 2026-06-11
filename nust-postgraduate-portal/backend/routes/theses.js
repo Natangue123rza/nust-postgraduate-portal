@@ -23,13 +23,34 @@ router.post('/submit', async (req, res) => {
       })
     }
 
-    // Insert thesis
+   // Insert thesis - start it in supervisor review explicitly (don't rely on the column default)
     await poolPromise.query(
-      `INSERT INTO theses 
-      (student_id, title, abstract, file_name) 
-      VALUES (?, ?, ?, ?)`,
-      [studentId, title, abstract, fileName]
+      'INSERT INTO theses (student_id, title, abstract, file_name, status, supervisor_status) VALUES (?, ?, ?, ?, ?, ?)',
+      [studentId, title, abstract, fileName, 'Pending Supervisor Review', 'Pending']
     )
+
+    // Get student name + their assigned supervisor(s) to notify
+    const [studentRows] = await poolPromise.query(
+      'SELECT name, supervisor_id, co_supervisor_id FROM users WHERE id = ?',
+      [studentId]
+    )
+    const studentName = studentRows[0].name
+    const supervisorId = studentRows[0].supervisor_id
+    const coSupervisorId = studentRows[0].co_supervisor_id
+
+    // Notify ONLY the assigned supervisor (and co-supervisor) - they review first
+    if (supervisorId) {
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [supervisorId, 'New Thesis Submitted', studentName + ' has submitted their thesis titled "' + title + '". Please review it.']
+      )
+    }
+    if (coSupervisorId) {
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [coSupervisorId, 'New Thesis Submitted', studentName + ' has submitted their thesis titled "' + title + '". Please review it.']
+      )
+    }
 
     res.json({ message: 'Thesis submitted successfully!' })
 
@@ -40,26 +61,24 @@ router.post('/submit', async (req, res) => {
 
 })
 
-// GET /api/theses/all
-// HOD views all theses
 router.get('/all', async (req, res) => {
-
+  const { departmentId } = req.query
   try {
-
-    const [rows] = await poolPromise.query(
-      `SELECT t.*, u.name as student_name, u.degree 
+    let query = `SELECT t.*, u.name as student_name, u.degree, u.department_id
        FROM theses t
        JOIN users u ON t.student_id = u.id
-       ORDER BY t.submitted_at DESC`
-    )
-
+       WHERE t.supervisor_status = 'approved'`
+    const params = []
+    if (departmentId) {
+      query += ' AND u.department_id = ?'
+      params.push(departmentId)
+    }
+    query += ' ORDER BY t.submitted_at DESC'
+    const [rows] = await poolPromise.query(query, params)
     res.json(rows)
-
   } catch (err) {
-    console.error('Fetch theses error:', err)
     res.status(500).json({ message: 'Server error' })
   }
-
 })
 
 // GET /api/theses/student/:studentId
@@ -105,6 +124,108 @@ router.put('/status/:thesisId', async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 
+})
+
+// PUT /api/theses/supervisor-review/:thesisId
+// Supervisor approves or rejects thesis
+router.put('/supervisor-review/:thesisId', async (req, res) => {
+
+  const { thesisId } = req.params
+  const { supervisorStatus, supervisorComments } = req.body
+
+  try {
+
+    await poolPromise.query(
+      `UPDATE theses 
+       SET supervisor_status = ?, supervisor_comments = ?
+       WHERE id = ?`,
+      [supervisorStatus, supervisorComments, thesisId]
+    )
+
+    if (supervisorStatus === 'approved') {
+      await poolPromise.query(
+        `UPDATE theses 
+         SET status = 'Awaiting Examiner Assignment' 
+         WHERE id = ?`,
+        [thesisId]
+      )
+    } else {
+      await poolPromise.query(
+        `UPDATE theses SET status = 'Revision Required' WHERE id = ?`,
+        [thesisId]
+      )
+    }
+
+    // Get thesis details
+    const [thesisRows] = await poolPromise.query(
+      `SELECT t.*, u.name as student_name 
+       FROM theses t 
+       JOIN users u ON t.student_id = u.id 
+       WHERE t.id = ?`,
+      [thesisId]
+    )
+
+    const thesis = thesisRows[0]
+
+    // Notify student
+    await poolPromise.query(
+      'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+      [
+        thesis.student_id,
+        supervisorStatus === 'approved'
+          ? '✅ Thesis Approved by Supervisor'
+          : '❌ Thesis Needs Revision',
+        supervisorStatus === 'approved'
+          ? `Your thesis has been approved by your supervisor. The grading process will now begin.`
+          : `Your supervisor has reviewed your thesis and requested revisions. Comments: ${supervisorComments}`
+      ]
+    )
+
+    // If approved, notify ONLY the HOD in the student's own department
+    if (supervisorStatus === 'approved') {
+      const [deptRows] = await poolPromise.query(
+        'SELECT department_id FROM users WHERE id = ?',
+        [thesis.student_id]
+      )
+      const studentDeptId = deptRows[0].department_id
+
+      const [hods] = await poolPromise.query(
+        "SELECT id FROM users WHERE role = 'hod' AND department_id = ?",
+        [studentDeptId]
+      )
+      for (const hod of hods) {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [hod.id, '🎓 Thesis Ready for Examiner Assignment', thesis.student_name + "'s thesis has been approved by the supervisor and is ready for examiner assignment."]
+        )
+      }
+    }
+
+    res.json({ message: `Thesis ${supervisorStatus} successfully!` })
+
+  } catch (err) {
+    console.error('Thesis supervisor review error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+
+})
+
+// GET /api/theses/versions/:studentId
+router.get('/versions/:studentId', async (req, res) => {
+  const { studentId } = req.params
+  try {
+    const [rows] = await poolPromise.query(
+      `SELECT id, title, version, status, supervisor_status,
+       supervisor_comments, submitted_at, file_name
+       FROM theses
+       WHERE student_id = ?
+       ORDER BY version ASC`,
+      [studentId]
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
 })
 
 module.exports = router
