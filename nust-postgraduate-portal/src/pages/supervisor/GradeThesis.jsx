@@ -145,7 +145,7 @@ function GradeThesis() {
   return (
     <div>
       <Navbar />
-      <div style={{ padding: '30px', maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1000px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{

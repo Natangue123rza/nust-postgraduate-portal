@@ -30,7 +30,11 @@ if (externalExaminerId) {
     [studentId, externalExaminerId, 'external']
   )
 }
-
+// Move the thesis off "Awaiting Examiner Assignment"
+    await poolPromise.query(
+      'UPDATE theses SET status = ? WHERE student_id = ?',
+      ['Under Examination', studentId]
+    )
     res.json({ message: 'Examiners assigned successfully!' })
 
   } catch (err) {

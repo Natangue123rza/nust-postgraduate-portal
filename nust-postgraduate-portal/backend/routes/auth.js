@@ -299,6 +299,64 @@ router.put('/assign-supervisors', async (req, res) => {
     console.error('Assign supervisors error:', err)
     res.status(500).json({ message: 'Server error' })
   }
+
+})
+
+
+  // PUT /api/auth/remove-supervisor/:studentId
+// Coordinator unassigns the supervisor (and co-supervisor) from a student
+router.put('/remove-supervisor/:studentId', async (req, res) => {
+  const studentId = req.params.studentId
+  try {
+    const [rows] = await poolPromise.query(
+      'SELECT s.name AS student_name, s.supervisor_id, s.co_supervisor_id ' +
+      'FROM users s WHERE s.id = ?',
+      [studentId]
+    )
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Student not found.' })
+    }
+
+    const student = rows[0]
+    if (!student.supervisor_id) {
+      return res.status(400).json({ message: 'This student has no supervisor assigned.' })
+    }
+
+    // Clear both the supervisor and co-supervisor
+    await poolPromise.query(
+      'UPDATE users SET supervisor_id = NULL, co_supervisor_id = NULL WHERE id = ?',
+      [studentId]
+    )
+
+    // Notify the removed supervisor
+    await poolPromise.query(
+      'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+      [student.supervisor_id, 'Supervision Removed',
+       'You have been unassigned as supervisor for ' + student.student_name + '.']
+    )
+
+    // Notify the removed co-supervisor, if there was one
+    if (student.co_supervisor_id) {
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [student.co_supervisor_id, 'Co-Supervision Removed',
+         'You have been unassigned as co-supervisor for ' + student.student_name + '.']
+      )
+    }
+
+    // Notify the student
+    await poolPromise.query(
+      'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+      [studentId, 'Supervisor Removed',
+       'Your supervisor has been unassigned. A new one will be assigned soon.']
+    )
+
+    res.json({ message: 'Supervisor removed from ' + student.student_name + '.' })
+  } catch (err) {
+    console.error('Remove supervisor error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
 })
 
 // GET /api/auth/my-supervisors/:studentId
@@ -409,6 +467,55 @@ router.get('/demo-examiners', async (req, res) => {
     )
     res.json(rows)
   } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/auth/faculty-staff?facultyId=X
+// Academic staff (supervisors + coordinators) in a faculty — for the Faculty Rep
+router.get('/faculty-staff', async (req, res) => {
+  const { facultyId } = req.query
+  try {
+    let query =
+      "SELECT u.id, u.name, u.email, u.role, u.department_id, d.name as department_name " +
+      "FROM users u LEFT JOIN departments d ON u.department_id = d.id " +
+      "WHERE u.role IN ('supervisor', 'coordinator')"
+    const params = []
+    if (facultyId) {
+      query += ' AND u.faculty_id = ?'
+      params.push(facultyId)
+    }
+    query += ' ORDER BY d.name, u.name'
+    const [rows] = await poolPromise.query(query, params)
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/auth/assign-coordinator
+// Faculty Rep appoints a staff member as Coordinator, or returns them to Supervisor
+router.put('/assign-coordinator', async (req, res) => {
+  const { userId, makeCoordinator } = req.body
+  try {
+    const newRole = makeCoordinator ? 'coordinator' : 'supervisor'
+    await poolPromise.query(
+      'UPDATE users SET role = ? WHERE id = ?',
+      [newRole, userId]
+    )
+    await poolPromise.query(
+      'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+      [
+        userId,
+        makeCoordinator ? 'Appointed as Coordinator' : 'Coordinator Role Removed',
+        makeCoordinator
+          ? 'You have been appointed as a Postgraduate Coordinator for your department.'
+          : 'Your Coordinator role has been removed. You remain a supervisor.'
+      ]
+    )
+    res.json({ message: makeCoordinator ? 'Coordinator assigned successfully!' : 'Coordinator role removed.' })
+  } catch (err) {
+    console.error('Assign coordinator error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

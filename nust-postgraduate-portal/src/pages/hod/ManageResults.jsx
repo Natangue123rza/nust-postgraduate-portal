@@ -49,13 +49,38 @@ const calculateResult = (studentDegree, activeEvals) => {
     // All the marks that currently count (voided ones are already excluded)
     const marks = activeEvals.map(function (e) { return e.total_mark })
 
-    // Masters: one examiner, so the single mark is the final mark
+   // Masters: 1 internal (supervisor) + 1 external = 2 marks expected
     if (studentDegree === 'Masters') {
+      if (marks.length < 2) {
+        return {
+          finalMark: null,
+          discrepancy: false,
+          status: 'Awaiting Examiners',
+          message: 'Waiting for all examiner marks (' + marks.length + ' of 2 submitted)'
+        } 
+      }
+
+      const highest = Math.max.apply(null, marks)
+      const lowest = Math.min.apply(null, marks)
+      const spread = highest - lowest
+
+      if (spread > 20) {
+        return {
+          finalMark: null,
+          discrepancy: true,
+          difference: spread,
+          status: 'Discrepancy — Requires Review',
+          message: '⚠️ ' + spread + ' point spread between examiners (' + marks.join(', ') + ')'
+        }
+      }
+
+      const sum = marks.reduce(function (a, b) { return a + b }, 0)
+      const average = Math.round(sum / marks.length)
       return {
-        finalMark: marks[0],
+        finalMark: average,
         discrepancy: false,
         status: 'Ready to Release',
-        message: 'Final mark: ' + marks[0] + '/100'
+        message: 'Final mark: ' + average + '/100 (average of ' + marks.join(', ') + ')'
       }
     }
 
@@ -157,7 +182,7 @@ const calculateResult = (studentDegree, activeEvals) => {
   return (
     <div>
       <Navbar />
-      <div style={{ padding: '30px', maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1280px', margin: '0 auto' }}>
 
         <div style={{
           backgroundColor: '#002147', color: 'white',
@@ -310,7 +335,7 @@ const calculateResult = (studentDegree, activeEvals) => {
                         fontWeight: 'bold', cursor: 'pointer',
                         marginBottom: '10px'
                       }}>
-                      {releasing === student.id ? 'Releasing...' : '🚀 Release Results to Student'}
+                      {releasing === student.id ? 'Releasing...' : '✅ Approve & Release to Student'}
                     </button>
                   )}
 
@@ -325,7 +350,8 @@ const calculateResult = (studentDegree, activeEvals) => {
                         ⚠️ Mark Discrepancy — {result.difference} point difference
                       </p>
                       <p style={{ marginBottom: '12px', fontSize: '12px' }}>
-                        Exceeds 10 point threshold. Reassign examiner for remarking.
+                       Exceeds the 20-point threshold. Review the examiners' comments,
+                        then assign another evaluator or refer to the faculty committee.
                       </p>
                       <button
                         onClick={() => handleReassign(student.id, student.name)}

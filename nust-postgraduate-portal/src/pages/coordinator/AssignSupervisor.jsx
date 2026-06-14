@@ -102,11 +102,41 @@ function AssignSupervisor() {
       setSaving(false)
     }
   }
+
+  const handleRemove = async () => {
+    const confirmed = window.confirm(
+      'Remove the supervisor (and co-supervisor) from ' + selectedStudent.name + '?\n\n' +
+      'The student will have no supervisor until you assign a new one. ' +
+      'The removed supervisor(s) and the student will be notified.'
+    )
+    if (!confirmed) return
+
+    setSaving(true)
+    try {
+      const response = await fetch(
+        'http://localhost:5000/api/auth/remove-supervisor/' + selectedStudent.id,
+        { method: 'PUT' }
+      )
+      const data = await response.json()
+      if (!response.ok) { alert(data.message); return }
+
+      alert(data.message)
+      setSelectedStudent(null)
+      setSupervisor('')
+      setCoSupervisor('')
+      fetchData()
+    } catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
   return (
     <div>
       <Navbar />
 
-      <div style={{ padding: '30px', maxWidth: '1100px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1280px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{
@@ -282,12 +312,28 @@ function AssignSupervisor() {
                     fontSize: '15px', fontWeight: 'bold',
                     cursor: saving ? 'not-allowed' : 'pointer'
                   }}>
-                 {saving
+             {saving
                     ? 'Saving...'
                     : selectedStudent.supervisor_id
                     ? 'Update Supervisor Assignment'
                     : 'Confirm Supervisor Assignment'}
                 </button>
+
+                {selectedStudent.supervisor_id && (
+                  <button
+                    onClick={handleRemove}
+                    disabled={saving}
+                    style={{
+                      width: '100%', padding: '12px',
+                      backgroundColor: 'transparent', color: '#8B0000',
+                      border: '1px solid #8B0000', borderRadius: '4px',
+                      fontSize: '14px', fontWeight: 'bold',
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      marginTop: '12px'
+                    }}>
+                    Remove Supervisor
+                  </button>
+                )}
 
               </div>
             )}

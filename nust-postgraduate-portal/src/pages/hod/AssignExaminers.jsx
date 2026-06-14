@@ -137,7 +137,7 @@ if (selectedStudent.degree === 'PhD' && !externalExaminer) {
 
       <div style={{
         padding: '30px',
-        maxWidth: '1100px',
+        maxWidth: '1280px',
         margin: '0 auto'
       }}>
 

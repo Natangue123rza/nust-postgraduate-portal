@@ -81,7 +81,7 @@ function HODDashboard() {
 
       <div style={{
         padding: '30px',
-        maxWidth: '1100px',
+        maxWidth: '1280px',
         margin: '0 auto'
       }}>
 
@@ -211,8 +211,27 @@ function HODDashboard() {
           HOD Actions
         </h2>
 
-        {/* Cards */}
+ {/* Cards */}
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+
+          {/* Assign Supervisors */}
+          <div
+            onClick={() => navigate('/coordinator/assign-supervisor')}
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #dddddd',
+              borderTop: '4px solid #002147',
+              padding: '25px', borderRadius: '8px',
+              cursor: 'pointer', width: '220px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+            }}>
+            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
+              👥 Assign Supervisors
+            </h3>
+            <p style={{ fontSize: '13px', color: '#666666' }}>
+              Assign main and co-supervisors to students
+            </p>
+          </div>
 
           {/* Assign Examiners */}
           <div

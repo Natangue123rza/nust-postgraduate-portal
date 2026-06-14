@@ -70,7 +70,7 @@ function SetAcademicPeriod() {
 
       <div style={{
         padding: '30px',
-        maxWidth: '600px',
+        maxWidth: '800px',
         margin: '0 auto'
       }}>
 

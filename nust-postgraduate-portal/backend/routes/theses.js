@@ -89,8 +89,8 @@ router.get('/student/:studentId', async (req, res) => {
 
   try {
 
-    const [rows] = await poolPromise.query(
-      'SELECT * FROM theses WHERE student_id = ?',
+  const [rows] = await poolPromise.query(
+      'SELECT * FROM theses WHERE student_id = ? ORDER BY version DESC',
       [studentId]
     )
 
@@ -224,6 +224,55 @@ router.get('/versions/:studentId', async (req, res) => {
     )
     res.json(rows)
   } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/theses/resubmit-version/:thesisId
+// Student resubmits their thesis as a new version
+router.put('/resubmit-version/:thesisId', async (req, res) => {
+  const { thesisId } = req.params
+  const { title, abstract, fileName } = req.body
+
+  try {
+    // Get the current (rejected) thesis
+    const [rows] = await poolPromise.query(
+      'SELECT * FROM theses WHERE id = ?',
+      [thesisId]
+    )
+    const current = rows[0]
+    const newVersion = current.version + 1
+
+    // Insert a NEW row for the new version - back to supervisor review
+    await poolPromise.query(
+      `INSERT INTO theses 
+       (student_id, title, abstract, file_name, status, supervisor_status, version)
+       VALUES (?, ?, ?, ?, 'Pending Supervisor Review', 'Pending', ?)`,
+      [current.student_id, title, abstract, fileName, newVersion]
+    )
+
+    // Notify the supervisor with context
+    const [studentRows] = await poolPromise.query(
+      'SELECT name, supervisor_id FROM users WHERE id = ?',
+      [current.student_id]
+    )
+    const student = studentRows[0]
+
+    if (student.supervisor_id) {
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [
+          student.supervisor_id,
+          'Thesis Resubmitted (Version ' + newVersion + ')',
+          student.name + ' has resubmitted their thesis (Version ' + newVersion + ') addressing your feedback. Please review.'
+        ]
+      )
+    }
+
+    res.json({ message: 'Thesis resubmitted as Version ' + newVersion + '!' })
+
+  } catch (err) {
+    console.error('Thesis resubmit error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

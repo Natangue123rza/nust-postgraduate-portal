@@ -2,160 +2,347 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useAuth } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from '../../components/LoadingSpinner'
 
 function CoordinatorDashboard() {
 
   const { user } = useAuth()
-  const navigate = useNavigate()
+
   const [students, setStudents] = useState([])
-  const [currentPeriod, setCurrentPeriod] = useState(null)
+  const [supervisors, setSupervisors] = useState([])
+  const [selectedStudent, setSelectedStudent] = useState(null)
+  const [supervisor, setSupervisor] = useState('')
+  const [coSupervisor, setCoSupervisor] = useState('')
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const fetchData = async () => {
+    try {
+      const studentsRes = await fetch(
+        'http://localhost:5000/api/auth/students?departmentId=' + user.department_id
+      )
+      setStudents(await studentsRes.json())
+
+      const supervisorsRes = await fetch(
+        'http://localhost:5000/api/auth/supervisors?departmentId=' + user.department_id
+      )
+      setSupervisors(await supervisorsRes.json())
+    } catch (err) {
+      console.error('Error fetching data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Students in the coordinator's department
-        const studentsRes = await fetch(
-          `http://localhost:5000/api/auth/students?departmentId=${user.department_id}`
-        )
-        setStudents(await studentsRes.json())
-
-        // Current semester
-        const periodRes = await fetch('http://localhost:5000/api/periods/detect')
-        setCurrentPeriod(await periodRes.json())
-      } catch (err) {
-        console.error('Error:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchData()
   }, [user.department_id])
 
-  // Count students without a supervisor
-  const unassignedCount = students.filter(s => !s.supervisor_id).length
+  const handleSelectStudent = (student) => {
+    setSelectedStudent(student)
+    setSupervisor(student.supervisor_id ? String(student.supervisor_id) : '')
+    setCoSupervisor(student.co_supervisor_id ? String(student.co_supervisor_id) : '')
+  }
+
+  const handleAssign = async () => {
+    if (!supervisor) {
+      alert('Please select a main supervisor.')
+      return
+    }
+    if (coSupervisor && coSupervisor === supervisor) {
+      alert('Co-supervisor must be different from the main supervisor.')
+      return
+    }
+
+    const hasExisting = selectedStudent.supervisor_id
+    const isChanging = hasExisting && String(selectedStudent.supervisor_id) !== supervisor
+
+    if (isChanging) {
+      const confirmed = window.confirm(
+        'This student already has a supervisor (' + selectedStudent.supervisor_name + ').\n\n' +
+        'Changing it will notify the current supervisor, the new supervisor, and the student.\n\nProceed?'
+      )
+      if (!confirmed) return
+    }
+
+    setSaving(true)
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/assign-supervisors', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          supervisorId: supervisor,
+          coSupervisorId: coSupervisor || null
+        })
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        alert(data.message)
+        return
+      }
+
+      alert(data.message)
+      setSelectedStudent(null)
+      setSupervisor('')
+      setCoSupervisor('')
+      fetchData()
+    } catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRemove = async () => {
+    const confirmed = window.confirm(
+      'Remove the supervisor (and co-supervisor) from ' + selectedStudent.name + '?\n\n' +
+      'The student will have no supervisor until you assign a new one. ' +
+      'The removed supervisor(s) and the student will be notified.'
+    )
+    if (!confirmed) return
+
+    setSaving(true)
+    try {
+      const response = await fetch(
+        'http://localhost:5000/api/auth/remove-supervisor/' + selectedStudent.id,
+        { method: 'PUT' }
+      )
+      const data = await response.json()
+      if (!response.ok) { alert(data.message); return }
+
+      alert(data.message)
+      setSelectedStudent(null)
+      setSupervisor('')
+      setCoSupervisor('')
+      fetchData()
+    } catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const needSupervisor = students.filter(s => !s.supervisor_id).length
 
   return (
     <div>
       <Navbar />
 
-      <div style={{ padding: '30px', maxWidth: '1100px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1280px', margin: '0 auto' }}>
 
-        {/* Welcome banner */}
+        {/* Header */}
         <div style={{
           backgroundColor: '#002147', color: 'white',
-          padding: '25px 30px', borderRadius: '8px', marginBottom: '25px'
+          padding: '25px 30px', borderRadius: '8px', marginBottom: '20px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '22px' }}>Welcome, {user.name}</h1>
+          <h1 style={{ margin: 0, fontSize: '22px' }}>Coordinator Dashboard</h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '14px' }}>
-           {user.faculty_name || 'Namibia University of Science and Technology'}
+            Welcome, {user.name} — assign supervisors and co-supervisors to your department's students
           </p>
         </div>
 
-        {/* Semester banner */}
-        {currentPeriod && (
-          <div style={{
-            backgroundColor: '#8B0000', color: 'white',
-            padding: '15px 25px', borderRadius: '8px', marginBottom: '30px',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-          }}>
-            <div>
-              <p style={{ margin: 0, fontSize: '13px', color: '#ffcccc' }}>
-                Current Academic Period
-              </p>
-              <p style={{ margin: '3px 0 0 0', fontSize: '18px', fontWeight: 'bold' }}>
-                {currentPeriod.semester} — {currentPeriod.academic_year}
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ margin: 0, fontSize: '12px', color: '#ffcccc' }}>Semester ends</p>
-              <p style={{ margin: '3px 0 0 0', fontSize: '14px', fontWeight: 'bold' }}>
-                {currentPeriod.end_date}
-              </p>
-            </div>
-          </div>
-        )}
+        {loading && <LoadingSpinner message="Loading students..." />}
 
-        {/* Stats */}
         {!loading && (
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '30px', flexWrap: 'wrap' }}>
+          <div>
+
+            {/* Quick count */}
             <div style={{
-              backgroundColor: 'white', padding: '20px 25px',
-              borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
-              flex: 1, minWidth: '150px', textAlign: 'center'
+              backgroundColor: needSupervisor > 0 ? '#fff3e0' : '#e6f4ea',
+              border: '1px solid ' + (needSupervisor > 0 ? '#ff9800' : '#4caf50'),
+              color: needSupervisor > 0 ? '#e65100' : '#2e7d32',
+              padding: '14px 18px', borderRadius: '8px', marginBottom: '25px',
+              fontSize: '14px'
             }}>
-              <p style={{ fontSize: '32px', fontWeight: 'bold', color: '#002147', margin: 0 }}>
-                {students.length}
-              </p>
-              <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
-                Department Students
-              </p>
+              {needSupervisor > 0
+                ? needSupervisor + ' student' + (needSupervisor > 1 ? 's' : '') + ' still need a supervisor assigned.'
+                : 'All students have a supervisor assigned. \u2705'}
             </div>
 
-            <div style={{
-              backgroundColor: unassignedCount > 0 ? '#fff3e0' : 'white',
-              padding: '20px 25px', borderRadius: '8px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
-              flex: 1, minWidth: '150px', textAlign: 'center',
-              border: unassignedCount > 0 ? '1px solid #ff9800' : '1px solid #dddddd'
-            }}>
-              <p style={{
-                fontSize: '32px', fontWeight: 'bold',
-                color: unassignedCount > 0 ? '#e65100' : '#002147', margin: 0
+            {/* No students */}
+            {students.length === 0 && (
+              <div style={{
+                backgroundColor: '#fff3e0', border: '1px solid #ff9800',
+                padding: '25px', borderRadius: '8px',
+                textAlign: 'center', color: '#e65100'
               }}>
-                {unassignedCount}
-              </p>
-              <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
-                Awaiting Supervisor
-              </p>
-            </div>
+                \u23F3 No students in your department yet.
+              </div>
+            )}
+
+            {/* Student list */}
+            {students.length > 0 && (
+              <div>
+                <h2 style={{
+                  color: '#002147', marginBottom: '20px', fontSize: '18px',
+                  borderLeft: '4px solid #8B0000', paddingLeft: '10px'
+                }}>
+                  Select a Student
+                </h2>
+
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '30px' }}>
+                  {students.map(student => (
+                    <div
+                      key={student.id}
+                      onClick={() => handleSelectStudent(student)}
+                      style={{
+                        backgroundColor: selectedStudent && selectedStudent.id === student.id ? '#002147' : 'white',
+                        color: selectedStudent && selectedStudent.id === student.id ? 'white' : '#333333',
+                        border: '1px solid #dddddd',
+                        borderTop: '4px solid ' + (student.degree === 'PhD' ? '#8B0000' : '#002147'),
+                        padding: '20px', borderRadius: '8px',
+                        cursor: 'pointer', width: '240px',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+                      }}>
+                      <h3 style={{ marginBottom: '8px', fontSize: '15px' }}>
+                        {student.name}
+                      </h3>
+                      <span style={{
+                        backgroundColor: student.degree === 'PhD' ? '#8B0000' : '#002147',
+                        color: 'white', padding: '3px 10px',
+                        borderRadius: '12px', fontSize: '11px'
+                      }}>
+                        {student.degree}
+                      </span>
+
+                      <div style={{ marginTop: '10px', fontSize: '12px' }}>
+                        <p style={{
+                          color: selectedStudent && selectedStudent.id === student.id ? '#ddd' : '#666',
+                          marginBottom: '2px'
+                        }}>
+                          Supervisor: {student.supervisor_name || 'Not assigned'}
+                        </p>
+                        <p style={{
+                          color: selectedStudent && selectedStudent.id === student.id ? '#ddd' : '#666'
+                        }}>
+                          Co-Supervisor: {student.co_supervisor_name || 'None'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Assignment form */}
+                {selectedStudent && (
+                  <div style={{
+                    backgroundColor: 'white', padding: '25px',
+                    borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+                  }}>
+                    <h2 style={{
+                      color: '#002147', marginBottom: '5px', fontSize: '18px',
+                      borderLeft: '4px solid #8B0000', paddingLeft: '10px'
+                    }}>
+                      Assign Supervisors for {selectedStudent.name}
+                    </h2>
+
+                    <div style={{
+                      backgroundColor: '#f0f7ff', border: '1px solid #002147',
+                      padding: '12px 15px', borderRadius: '6px',
+                      margin: '15px 0', fontSize: '13px', color: '#002147'
+                    }}>
+                      The co-supervisor is optional and supports the main supervisor. Both must be from the same department.
+                    </div>
+
+                    {/* Main supervisor */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{
+                        display: 'block', fontWeight: 'bold',
+                        color: '#002147', marginBottom: '6px'
+                      }}>
+                        Main Supervisor: *
+                      </label>
+                      <select
+                        value={supervisor}
+                        onChange={(e) => setSupervisor(e.target.value)}
+                        style={{
+                          width: '100%', padding: '10px',
+                          border: '1px solid #cccccc', borderRadius: '4px',
+                          fontSize: '14px', backgroundColor: 'white'
+                        }}>
+                        <option value="">-- Select Main Supervisor --</option>
+                        {supervisors.map(sup => (
+                          <option key={sup.id} value={String(sup.id)}>
+                            {sup.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Co-supervisor */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{
+                        display: 'block', fontWeight: 'bold',
+                        color: '#002147', marginBottom: '6px'
+                      }}>
+                        Co-Supervisor (optional):
+                      </label>
+                      <select
+                        value={coSupervisor}
+                        onChange={(e) => setCoSupervisor(e.target.value)}
+                        style={{
+                          width: '100%', padding: '10px',
+                          border: '1px solid #cccccc', borderRadius: '4px',
+                          fontSize: '14px', backgroundColor: 'white'
+                        }}>
+                        <option value="">-- No Co-Supervisor --</option>
+                        {supervisors
+                          .filter(sup => String(sup.id) !== supervisor)
+                          .map(sup => (
+                            <option key={sup.id} value={String(sup.id)}>
+                              {sup.name}
+                            </option>
+                          ))
+                        }
+                      </select>
+                    </div>
+
+                    {/* Save button */}
+                    <button
+                      onClick={handleAssign}
+                      disabled={saving}
+                      style={{
+                        width: '100%', padding: '12px',
+                        backgroundColor: saving ? '#cccccc' : '#002147',
+                        color: 'white', border: 'none', borderRadius: '4px',
+                        fontSize: '15px', fontWeight: 'bold',
+                        cursor: saving ? 'not-allowed' : 'pointer'
+                      }}>
+                      {saving
+                        ? 'Saving...'
+                        : selectedStudent.supervisor_id
+                        ? 'Update Supervisor Assignment'
+                        : 'Confirm Supervisor Assignment'}
+                    </button>
+
+                    {/* Remove button */}
+                    {selectedStudent.supervisor_id && (
+                      <button
+                        onClick={handleRemove}
+                        disabled={saving}
+                        style={{
+                          width: '100%', padding: '12px',
+                          backgroundColor: 'transparent', color: '#8B0000',
+                          border: '1px solid #8B0000', borderRadius: '4px',
+                          fontSize: '14px', fontWeight: 'bold',
+                          cursor: saving ? 'not-allowed' : 'pointer',
+                          marginTop: '12px'
+                        }}>
+                        Remove Supervisor
+                      </button>
+                    )}
+
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
         )}
 
-        {/* Section title */}
-        <h2 style={{
-          color: '#002147', marginBottom: '20px', fontSize: '18px',
-          borderLeft: '4px solid #8B0000', paddingLeft: '10px'
-        }}>
-          Coordinator Actions
-        </h2>
-
-        {/* Action cards */}
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-
-          {/* Assign Supervisor card */}
-          <div
-            onClick={() => navigate('/coordinator/assign-supervisor')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: `4px solid ${unassignedCount > 0 ? '#ff9800' : '#002147'}`,
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '260px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
-              position: 'relative'
-            }}>
-            {unassignedCount > 0 && (
-              <span style={{
-                position: 'absolute', top: '-8px', right: '-8px',
-                backgroundColor: '#ff9800', color: 'white',
-                borderRadius: '50%', width: '22px', height: '22px',
-                fontSize: '12px', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'
-              }}>
-                {unassignedCount}
-              </span>
-            )}
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              👨‍🏫 Assign Supervisors
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Assign supervisors and co-supervisors to postgraduate students in your department
-            </p>
-          </div>
-
-        </div>
       </div>
     </div>
   )

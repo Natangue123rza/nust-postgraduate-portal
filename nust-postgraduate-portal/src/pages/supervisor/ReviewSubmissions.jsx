@@ -188,7 +188,7 @@ setThesisVersions(await thesisVersionsRes.json())
   return (
     <div>
       <Navbar />
-      <div style={{ padding: '30px', maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1280px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{

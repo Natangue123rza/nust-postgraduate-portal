@@ -130,12 +130,14 @@ function ProposalUpload() {
     const isPending = existingProposal.status === 'Pending HDC Review' || 
                   existingProposal.status === 'Pending Supervisor Review' ||
                   existingProposal.status === 'Pending'
-    const isApproved = existingProposal.status === 'Approved'
+   const isApproved = existingProposal.status === 'Approved'
+    // If the supervisor approved, any rejection came from the HDC; otherwise it was the supervisor
+    const rejectedBySupervisor = (existingProposal.supervisor_status || '').toLowerCase() !== 'approved'
 
     return (
       <div style={{
         backgroundColor: isRejected ? '#fce4e4' : isApproved ? '#e6f4ea' : '#fff3e0',
-        border: `1px solid ${isRejected ? '#ef5350' : isApproved ? '#4caf50' : '#ff9800'}`,
+        border: `1px solid ${isRejected ? '#ef5350' : isApproved ? '#58915a' : '#ff9800'}`,
         padding: '20px',
         borderRadius: '8px',
         marginBottom: '25px'
@@ -155,14 +157,8 @@ function ProposalUpload() {
         <p style={{ fontSize: '13px', color: '#333', marginBottom: '5px' }}>
           <strong>Submitted:</strong> {new Date(existingProposal.submitted_at).toLocaleDateString()}
         </p>
-      {existingProposal.hdc_comments && (
-          <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px' }}>
-            <strong>HDC Comments:</strong> {existingProposal.hdc_comments}
-          </p>
-        )}
-
-        {/* Supervisor's feedback - full rejection reason, handles long text */}
-        {isRejected && existingProposal.supervisor_comments && (
+  {/* Rejection feedback — show the reason from whoever actually rejected it */}
+        {isRejected && (
           <div style={{
             backgroundColor: 'white',
             border: '1px solid #ef9a9a',
@@ -172,12 +168,21 @@ function ProposalUpload() {
             margin: '12px 0'
           }}>
             <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#c62828', margin: '0 0 6px 0', letterSpacing: '0.5px' }}>
-              SUPERVISOR'S FEEDBACK
+              {rejectedBySupervisor ? "SUPERVISOR'S FEEDBACK" : 'HIGHER DEGREES COMMITTEE FEEDBACK'}
             </p>
             <p style={{ fontSize: '13px', color: '#333333', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-              {existingProposal.supervisor_comments}
+              {rejectedBySupervisor
+                ? (existingProposal.supervisor_comments || 'No comment was provided.')
+                : (existingProposal.hdc_comments || 'No comment was provided.')}
             </p>
           </div>
+        )}
+
+        {/* Committee note shown when approved (if any) */}
+        {isApproved && existingProposal.hdc_comments && (
+          <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px' }}>
+            <strong>Committee note:</strong> {existingProposal.hdc_comments}
+          </p>
         )}
 
         {/* Resubmit button only if rejected */}
@@ -205,20 +210,40 @@ function ProposalUpload() {
       {/* If approved — show ethics upload */}
 {isApproved && (
   <div style={{ marginTop: '15px' }}>
-    <p style={{ fontSize: '13px', color: '#2e7d32', marginBottom: '10px' }}>
-      ✅ Your proposal has been approved. Please submit your ethics clearance form.
-    </p>
+ <div style={{
+      backgroundColor: '#8B0000', color: 'white',
+      padding: '14px 18px', borderRadius: '8px', marginBottom: '15px'
+    }}>
+      <p style={{ margin: 0, fontWeight: 'bold', fontSize: '14px' }}>
+        ✅ Proposal approved — next required step
+      </p>
+      <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#ffdede' }}>
+        Please upload your signed ethics clearance form below to complete this stage.
+      </p>
+    </div>
 
     {/* Ethics status */}
-    {existingProposal.ethics_status === 'Submitted' ? (
+ {(existingProposal.ethics_status === 'Submitted' || existingProposal.ethics_status === 'Verified') ? (
       <div style={{
-        backgroundColor: '#e6f4ea', border: '1px solid #4caf50',
-        padding: '12px', borderRadius: '6px', fontSize: '13px', color: '#2e7d32'
+        backgroundColor: existingProposal.ethics_status === 'Verified' ? '#e6f4ea' : '#e3f2fd',
+        border: '1px solid ' + (existingProposal.ethics_status === 'Verified' ? '#4caf50' : '#2196f3'),
+        padding: '12px', borderRadius: '6px', fontSize: '13px',
+        color: existingProposal.ethics_status === 'Verified' ? '#2e7d32' : '#1565c0'
       }}>
-        ✅ Ethics clearance submitted successfully!
+        {existingProposal.ethics_status === 'Verified'
+          ? '✅ Your ethics clearance has been confirmed and is on file. You may proceed with your research.'
+          : '⏳ Ethics clearance submitted — awaiting confirmation from the HOD.'}
       </div>
     ) : (
-      <div>
+    <div>
+        {existingProposal.ethics_status === 'Resubmit' && (
+          <div style={{
+            backgroundColor: '#fce4e4', border: '1px solid #ef5350',
+            padding: '12px', borderRadius: '6px', fontSize: '13px', color: '#c62828', marginBottom: '12px'
+          }}>
+            ⚠️ The HOD could not accept your previous ethics upload. Please upload a valid, signed ethics clearance certificate below.
+          </div>
+        )}
         <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px' }}>
           Please download the ethics form, fill it in, get it signed and upload it below.
         </p>
@@ -301,7 +326,7 @@ function ProposalUpload() {
     <div>
       <Navbar />
 
-      <div style={{ padding: '30px', maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1000px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{

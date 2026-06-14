@@ -1,15 +1,7 @@
 // src/App.jsx
-
-// We import Routes and Route from react-router-dom
-// Routes = the container that holds all our routes
-// Route = one single path-to-page mapping
 import { Routes, Route } from 'react-router-dom'
-
-// Import our ProtectedRoute guard
 import ProtectedRoute from './routes/ProtectedRoute'
 
-
-// Import all our pages so we can use them
 import Login from './pages/Login'
 import StudentDashboard from './pages/student/StudentDashboard'
 import HODDashboard from './pages/hod/HODDashboard'
@@ -17,7 +9,7 @@ import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import ExaminerDashboard from './pages/examiner/ExaminerDashboard'
 import ProgressReport from './pages/student/ProgressReport'
 import AssignExaminers from './pages/hod/AssignExaminers'
-import EvaluationForm from './pages/examiner/EvaluationForm' 
+import EvaluationForm from './pages/examiner/EvaluationForm'
 import StudentList from './pages/supervisor/StudentList'
 import ProposalUpload from './pages/student/ProposalUpload'
 import ThesisSubmission from './pages/student/ThesisSubmission'
@@ -35,214 +27,224 @@ import ReviewSubmissions from './pages/supervisor/ReviewSubmissions'
 import GradeThesis from './pages/supervisor/GradeThesis'
 import DefaultDashboard from './pages/DefaultDashboard'
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard'
-import CoordinatorAssignSupervisor from './pages/coordinator/AssignSupervisor'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ManageExaminers from './pages/admin/ManageExaminers'
-
-
-
-
+import FacultyRepDashboard from './pages/facultyrep/FacultyRepDashboard'
+import AssignCoordinator from './pages/facultyrep/AssignCoordinator'
+import FacultyApprovals from './pages/facultyrep/FacultyApprovals'
 
 function App() {
   return (
     <Routes>
-    { /*Login is Public - anyone can see it*/ }
-    <Route path="/" element={<Login />} />
+      {/* Login is public */}
+      <Route path="/" element={<Login />} />
 
-    {/* Student route - only students allowed */ }
-    <Route path='/student' element={
-      <ProtectedRoute allowedRoles={['student']}>
-        <StudentDashboard/>
+      {/* Student */}
+      <Route path="/student" element={
+        <ProtectedRoute allowedRoles={['student']}>
+          <StudentDashboard />
         </ProtectedRoute>
-    }/>
+      } />
 
-    {/* HOD route -only HOD allowed */}
-    <Route path="/hod" element={
-      <ProtectedRoute allowedRoles={['hod']}>
-        <HODDashboard />
-      </ProtectedRoute>
-    } />
+      {/* Coordinator home (kept at /hod so existing back buttons still work) */}
+      <Route path="/hod" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <HODDashboard />
+        </ProtectedRoute>
+      } />
 
-    {/* Supervisor route - only supervisor allowed */}
-    <Route  path="/supervisor" element= {
-      <ProtectedRoute allowedRoles={['supervisor']}>
-      <SupervisorDashboard/>
-      </ProtectedRoute>
-    }/>
+      {/* Supervisor */}
+      <Route path="/supervisor" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <SupervisorDashboard />
+        </ProtectedRoute>
+      } />
 
-    {/* Examiner route - only examiner allowed */}
-    <Route path="/examiner" element={
-      <ProtectedRoute allowedRoles={['examiner']}>
-       <ExaminerDashboard/>
-      </ProtectedRoute>
-    }
-     />
+      {/* Examiner */}
+      <Route path="/examiner" element={
+        <ProtectedRoute allowedRoles={['examiner']}>
+          <ExaminerDashboard />
+        </ProtectedRoute>
+      } />
 
-     {/* Student Progress Report - only student allowed */}
-    {/* Student Progress Report - only students allowed */}
-<Route path="/student/progress-report" element={
-  <ProtectedRoute allowedRoles={['student']}>
-    <ProgressReport />
-  </ProtectedRoute>
-} />
+      {/* Student progress report */}
+      <Route path="/student/progress-report" element={
+        <ProtectedRoute allowedRoles={['student']}>
+          <ProgressReport />
+        </ProtectedRoute>
+      } />
 
-{/* HOD Assign Examiners */}
-<Route path="/hod/assign-examiners" element={
-  <ProtectedRoute allowedRoles={['hod']}>
-    <AssignExaminers />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: assign examiners */}
+      <Route path="/hod/assign-examiners" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <AssignExaminers />
+        </ProtectedRoute>
+      } />
 
-{/* Examiner Evaluation Form */}
-<Route path="/examiner/evaluate" element={
-  <ProtectedRoute allowedRoles={['examiner']}>
-    <EvaluationForm />
-  </ProtectedRoute>
-} />
+      {/* Examiner evaluation form */}
+      <Route path="/examiner/evaluate" element={
+        <ProtectedRoute allowedRoles={['examiner']}>
+          <EvaluationForm />
+        </ProtectedRoute>
+      } />
 
+      {/* Supervisor student list */}
+      <Route path="/supervisor/students" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <StudentList />
+        </ProtectedRoute>
+      } />
 
-{/* Supervisor Student List */}
-<Route path="/supervisor/students" element={
-  <ProtectedRoute allowedRoles={['supervisor']}>
-    <StudentList />
-  </ProtectedRoute>
-} />
+      {/* Student proposal upload */}
+      <Route path="/student/proposal" element={
+        <ProtectedRoute allowedRoles={['student']}>
+          <ProposalUpload />
+        </ProtectedRoute>
+      } />
 
+      {/* Student thesis submission */}
+      <Route path="/student/thesis" element={
+        <ProtectedRoute allowedRoles={['student']}>
+          <ThesisSubmission />
+        </ProtectedRoute>
+      } />
 
-{/* Student Proposal Upload */}
-<Route path="/student/proposal" element={
-  <ProtectedRoute allowedRoles={['student']}>
-    <ProposalUpload />
-  </ProtectedRoute>
-} />
+      {/* Supervisor progress report review */}
+      <Route path="/supervisor/progress-reports" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <ProgressReportReview />
+        </ProtectedRoute>
+      } />
 
-{/* Student Thesis Submission */}
-<Route path="/student/thesis" element={
-  <ProtectedRoute allowedRoles={['student']}>
-    <ThesisSubmission />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: view submissions */}
+      <Route path="/hod/submissions" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <ViewSubmissions />
+        </ProtectedRoute>
+      } />
 
-{/* Supervisor Progress Report Review */}
-<Route path="/supervisor/progress-reports" element={
-  <ProtectedRoute allowedRoles={['supervisor']}>
-    <ProgressReportReview />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: HDC / proposal decision */}
+      <Route path="/hod/hdc-decision" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <HDCDecision />
+        </ProtectedRoute>
+      } />
 
-{/* HOD View Submissions */}
-<Route path="/hod/submissions" element={
-  <ProtectedRoute allowedRoles={['hod']}>
-    <ViewSubmissions />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: set deadlines */}
+      <Route path="/hod/deadlines" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <SetDeadlines />
+        </ProtectedRoute>
+      } />
 
-{/* HOD HDC Decision */}
-<Route path="/hod/hdc-decision" element={
-  <ProtectedRoute allowedRoles={['hod']}>
-    <HDCDecision />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: set academic period */}
+      <Route path="/hod/set-period" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <SetAcademicPeriod />
+        </ProtectedRoute>
+      } />
 
-{/* HOD Set Deadlines */}
-<Route path="/hod/deadlines" element={
-  <ProtectedRoute allowedRoles={['hod']}>
-    <SetDeadlines />
-  </ProtectedRoute>
-} />
+      {/* Student results */}
+      <Route path="/student/results" element={
+        <ProtectedRoute allowedRoles={['student']}>
+          <Results />
+        </ProtectedRoute>
+      } />
 
-{/* HOD Set Academic Period */}
-<Route path="/hod/set-period" element={
-  <ProtectedRoute allowedRoles={['hod']}>
-    <SetAcademicPeriod />
-  </ProtectedRoute>
-} />
+      {/* Supervisor view proposals */}
+      <Route path="/supervisor/proposals" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <ViewProposals />
+        </ProtectedRoute>
+      } />
 
-{/* Student Results */}
-<Route path="/student/results" element={
-  <ProtectedRoute allowedRoles={['student']}>
-    <Results />
-  </ProtectedRoute>
-} />
+      {/* Supervisor view theses */}
+      <Route path="/supervisor/theses" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <ViewTheses />
+        </ProtectedRoute>
+      } />
 
-{/* Supervisor View Proposals */}
-<Route path="/supervisor/proposals" element={
-  <ProtectedRoute allowedRoles={['supervisor']}>
-    <ViewProposals />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: manage results */}
+      <Route path="/hod/results" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <ManageResults />
+        </ProtectedRoute>
+      } />
 
-{/* Supervisor View Theses */}
-<Route path="/supervisor/theses" element={
-  <ProtectedRoute allowedRoles={['supervisor']}>
-    <ViewTheses />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: assign supervisor (legacy route, kept harmless) */}
+      <Route path="/hod/assign-supervisor" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <AssignSupervisor />
+        </ProtectedRoute>
+      } />
 
-{/* HOD Manage Results */}
-<Route path="/hod/results" element={
-  <ProtectedRoute allowedRoles={['hod']}>
-    <ManageResults />
-  </ProtectedRoute>
-} />
+      {/* Supervisor review submissions */}
+      <Route path="/supervisor/review" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <ReviewSubmissions />
+        </ProtectedRoute>
+      } />
 
-{/* HOD Assign Supervisor */}
-<Route path="/hod/assign-supervisor" element={
-  <ProtectedRoute allowedRoles={['hod']}>
-    <AssignSupervisor />
-  </ProtectedRoute>
-} />
+      {/* Supervisor grade thesis */}
+      <Route path="/supervisor/grade" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <GradeThesis />
+        </ProtectedRoute>
+      } />
 
-{/* Supervisor Review Submissions */}
-<Route path="/supervisor/review" element={
-  <ProtectedRoute allowedRoles={['supervisor']}>
-    <ReviewSubmissions />
-  </ProtectedRoute>
-} />
+      {/* Default dashboard for non-postgraduate users */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute allowedRoles={['undergraduate', 'junior_lecturer', 'admin_staff']}>
+          <DefaultDashboard />
+        </ProtectedRoute>
+      } />
 
-{/* Supervisor Grade Thesis */}
-<Route path="/supervisor/grade" element={
-  <ProtectedRoute allowedRoles={['supervisor']}>
-    <GradeThesis />
-  </ProtectedRoute>
-} />
+      {/* Coordinator home */}
+      <Route path="/coordinator" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <HODDashboard />
+        </ProtectedRoute>
+      } />
 
-{/* Default dashboard for non-postgraduate users */}
-<Route path="/dashboard" element={
-  <ProtectedRoute allowedRoles={['undergraduate', 'junior_lecturer', 'admin_staff']}>
-    <DefaultDashboard />
-  </ProtectedRoute>
-} />
+      {/* Coordinator: assign supervisors */}
+      <Route path="/coordinator/assign-supervisor" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <CoordinatorDashboard />
+        </ProtectedRoute>
+      } />
 
-{/* Coordinator dashboard */}
-<Route path="/coordinator" element={
-  <ProtectedRoute allowedRoles={['coordinator']}>
-    <CoordinatorDashboard />
-  </ProtectedRoute>
-} />
+      {/* Admin dashboard */}
+      <Route path="/admin" element={
+        <ProtectedRoute allowedRoles={['admin_staff']}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      } />
 
-{/* Coordinator assign supervisor */}
-<Route path="/coordinator/assign-supervisor" element={
-  <ProtectedRoute allowedRoles={['coordinator']}>
-    <CoordinatorAssignSupervisor />
-  </ProtectedRoute>
-} />
+      {/* Admin manage examiners */}
+      <Route path="/admin/examiners" element={
+        <ProtectedRoute allowedRoles={['admin_staff']}>
+          <ManageExaminers />
+        </ProtectedRoute>
+      } />
 
-{/* Admin dashboard */}
-<Route path="/admin" element={
-  <ProtectedRoute allowedRoles={['admin_staff']}>
-    <AdminDashboard />
-  </ProtectedRoute>
-} />
+      {/* Faculty HDC Representative */}
+      <Route path="/faculty-rep" element={
+        <ProtectedRoute allowedRoles={['faculty_rep']}>
+          <FacultyRepDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/faculty-rep/assign-coordinator" element={
+        <ProtectedRoute allowedRoles={['faculty_rep']}>
+          <AssignCoordinator />
+        </ProtectedRoute>
+      } />
+      <Route path="/faculty-rep/approvals" element={
+        <ProtectedRoute allowedRoles={['faculty_rep']}>
+          <FacultyApprovals />
+        </ProtectedRoute>
+      } />
 
-{/* Admin manage examiners */}
-<Route path="/admin/examiners" element={
-  <ProtectedRoute allowedRoles={['admin_staff']}>
-    <ManageExaminers />
-  </ProtectedRoute>
-} />
-
-     
     </Routes>
   )
 }

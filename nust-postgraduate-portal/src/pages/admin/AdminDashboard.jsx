@@ -12,7 +12,7 @@ function AdminDashboard() {
     <div>
       <Navbar />
 
-      <div style={{ padding: '30px', maxWidth: '1100px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1280px', margin: '0 auto' }}>
 
         {/* Welcome banner */}
         <div style={{

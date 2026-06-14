@@ -115,18 +115,42 @@ router.put('/hdc-decision/:proposalId', async (req, res) => {
 
   try {
 
+    const newStatus = hdcDecision === 'approved' ? 'Approved' : 'Rejected'
+
     await poolPromise.query(
-      `UPDATE proposals 
-       SET hdc_decision = ?, hdc_comments = ?, 
-       status = ? 
-       WHERE id = ?`,
-      [
-        hdcDecision, 
-        hdcComments,
-        hdcDecision === 'approved' ? 'Approved' : 'Rejected',
-        proposalId
-      ]
+      'UPDATE proposals SET hdc_decision = ?, hdc_comments = ?, status = ? WHERE id = ?',
+      [hdcDecision, hdcComments, newStatus, proposalId]
     )
+
+    // Find which student this proposal belongs to
+    const [rows] = await poolPromise.query(
+      'SELECT student_id FROM proposals WHERE id = ?',
+      [proposalId]
+    )
+    const studentId = rows.length > 0 ? rows[0].student_id : null
+
+    // Notify the student of the committee's decision
+    if (studentId) {
+      if (hdcDecision === 'approved') {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [
+            studentId,
+            'Proposal Approved by HDC',
+            'Your research proposal has been approved. Your next step is to upload your signed ethics clearance form on the proposal page.'
+          ]
+        )
+      } else {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [
+            studentId,
+            'Proposal Not Approved by HDC',
+            'The Higher Degrees Committee did not approve your proposal. Open it to read their feedback, then revise and resubmit.'
+          ]
+        )
+      }
+    }
 
     res.json({ message: 'HDC decision recorded successfully!' })
 
@@ -254,14 +278,20 @@ router.put('/resubmit-version/:proposalId', async (req, res) => {
     )
     const student = studentRows[0]
 
-    // Notify supervisor
+// Work out why it's coming back, so the supervisor has context
+    const cameFromHDC = (current.status === 'Rejected') || ((current.hdc_decision || '').toLowerCase() === 'rejected')
+    const reviewContext = cameFromHDC
+      ? ' This proposal was returned by the HDC and the student has revised it. Please re-review it before it goes back to the committee.'
+      : ' The student has revised it to address your earlier feedback. Please review.'
+
+    // Notify supervisor with context
     if (student.supervisor_id) {
       await poolPromise.query(
         'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
         [
           student.supervisor_id,
-          '📄 Proposal Resubmitted',
-          `${student.name} has resubmitted their research proposal (Version ${newVersion}). Please review it.`
+          'Proposal Resubmitted (Version ' + newVersion + ')',
+          student.name + ' has resubmitted their research proposal (Version ' + newVersion + ').' + reviewContext
         ]
       )
     }
@@ -337,6 +367,115 @@ router.get('/versions/:studentId', async (req, res) => {
     )
     res.json(rows)
   } catch (err) {
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/proposals/ethics-review/:proposalId
+// HOD confirms the ethics clearance is on file, or asks for a correct document
+router.put('/ethics-review/:proposalId', async (req, res) => {
+
+  const { proposalId } = req.params
+  const { ethicsStatus } = req.body  // 'Verified' or 'Resubmit'
+
+  try {
+
+    await poolPromise.query(
+      'UPDATE proposals SET ethics_status = ? WHERE id = ?',
+      [ethicsStatus, proposalId]
+    )
+
+    const [rows] = await poolPromise.query(
+      'SELECT student_id FROM proposals WHERE id = ?',
+      [proposalId]
+    )
+    const studentId = rows.length > 0 ? rows[0].student_id : null
+
+    if (studentId) {
+      if (ethicsStatus === 'Verified') {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [studentId, 'Ethics Clearance Confirmed',
+           'Your ethics clearance has been confirmed and is on file. You may proceed with your research.']
+        )
+      } else {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [studentId, 'Ethics Clearance — Action Needed',
+           'Your uploaded ethics clearance could not be accepted. Please re-upload a valid, signed ethics clearance certificate on your proposal page.']
+        )
+      }
+    }
+
+    res.json({ message: 'Ethics review updated.' })
+
+  } catch (err) {
+    console.error('Ethics review error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/proposals/faculty?facultyId=X
+// Coordinator-approved proposals awaiting (or holding) faculty-level approval
+router.get('/faculty', async (req, res) => {
+  const { facultyId } = req.query
+  try {
+    let query =
+      "SELECT p.*, u.name as student_name, u.degree, u.faculty_id, " +
+      "sup.name as supervisor_name, fac.name as faculty_approver_name " +
+      "FROM proposals p " +
+      "JOIN users u ON p.student_id = u.id " +
+      "LEFT JOIN users sup ON u.supervisor_id = sup.id " +
+      "LEFT JOIN users fac ON p.faculty_approved_by = fac.id " +
+      "WHERE p.hdc_decision = 'approved' " +
+      "AND p.version = (SELECT MAX(p2.version) FROM proposals p2 WHERE p2.student_id = p.student_id)"
+    const params = []
+    if (facultyId) {
+      query += ' AND u.faculty_id = ?'
+      params.push(facultyId)
+    }
+    query += ' ORDER BY p.submitted_at DESC'
+    const [rows] = await poolPromise.query(query, params)
+    res.json(rows)
+  } catch (err) {
+    console.error('Faculty proposals error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/proposals/faculty-approve/:proposalId
+// Faculty Rep records the faculty-level decision (who + when)
+router.put('/faculty-approve/:proposalId', async (req, res) => {
+  const { proposalId } = req.params
+  const { approverId, decision, comments } = req.body
+  try {
+    const facultyStatus = decision === 'approved' ? 'Approved' : 'Rejected'
+    await poolPromise.query(
+      'UPDATE proposals SET faculty_status = ?, faculty_approved_by = ?, faculty_comments = ?, faculty_approved_at = NOW() WHERE id = ?',
+      [facultyStatus, approverId, comments || null, proposalId]
+    )
+
+    const [rows] = await poolPromise.query(
+      'SELECT student_id FROM proposals WHERE id = ?',
+      [proposalId]
+    )
+    const studentId = rows.length > 0 ? rows[0].student_id : null
+    if (studentId) {
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [
+          studentId,
+          decision === 'approved' ? 'Proposal Approved at Faculty Level' : 'Proposal Not Approved at Faculty Level',
+          decision === 'approved'
+            ? 'Your proposal has received faculty-level approval.'
+            : 'Your proposal was not approved at faculty level. Please check the feedback.'
+        ]
+      )
+    }
+
+    res.json({ message: 'Faculty decision recorded.' })
+  } catch (err) {
+    console.error('Faculty approve error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

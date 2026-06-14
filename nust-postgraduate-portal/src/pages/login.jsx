@@ -21,12 +21,15 @@ function Login() {
   // Demo accounts for quick-fill during presentation (seed data only)
   const demoAccounts = [
     { label: 'CS — Masters Student', email: '222012345@nust.na', password: 'student123' },
+    { label: 'CS — Masters Student2', email: 'natangue@nust.na', password: 'delson123' },
     { label: 'CS — PhD Student', email: '221098765@nust.na', password: 'phd123' },
-    { label: 'CS — HOD', email: 'joel.eelu@nust.na', password: 'hod123' },
+     { label: 'CS — PhD Student2', email: '211937536@nust.na', password: 'victoria123' },
     { label: 'CS — Coordinator', email: 'coordinator@nust.na', password: 'coord123' },
+    { label: 'FCI — Faculty HDC Rep', email: 'faculty.rep@nust.na', password: 'rep123' },
     { label: 'CS — Supervisor', email: 'fili.nghidengwa@nust.na', password: 'supervisor123' },
     { label: 'Civil — PhD Student', email: '223009988@nust.na', password: 'student123' },
-    { label: 'Civil — HOD', email: 'civil.hod@nust.na', password: 'hod123' },
+     { label: 'Civil — PhD Student2', email: '220847145@nust.na', password: 'ndeya123' },
+     { label: 'Civil — Masters Student', email: '222936903@nust.na', password: 'bianca123' },
     { label: 'Civil — Coordinator', email: 'civil.coordinator@nust.na', password: 'coord123' },
     { label: 'Civil — Supervisor', email: 'civil.supervisor@nust.na', password: 'supervisor123' },
     { label: 'CS - Co-Supervisor', email: 'anna.shilongo@nust.na', password: 'supervisor123' },
@@ -105,14 +108,14 @@ function Login() {
     // Redirect based on role
 if (data.user.role === 'student') {
   navigate('/student')
-} else if (data.user.role === 'hod') {
-  navigate('/hod')
 } else if (data.user.role === 'supervisor') {
   navigate('/supervisor')
 } else if (data.user.role === 'examiner') {
   navigate('/examiner')
 } else if (data.user.role === 'coordinator') {
   navigate('/coordinator')
+} else if (data.user.role === 'faculty_rep') {
+  navigate('/faculty-rep')
 } else if (data.user.role === 'admin_staff') {
   navigate('/admin')
 } else {
@@ -141,7 +144,7 @@ if (data.user.role === 'student') {
       borderRadius: '8px',
       boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
       width: '100%',
-      maxWidth: '400px'
+      maxWidth: '600px'
     }}>
 
       {/* University header */}
