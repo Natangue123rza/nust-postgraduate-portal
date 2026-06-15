@@ -415,44 +415,6 @@ router.get('/all-examiners', async (req, res) => {
   }
 })
 
-// POST /api/auth/create-examiner
-// Admin creates an external examiner account
-router.post('/create-examiner', async (req, res) => {
-  const { name, email, password, departmentId } = req.body
-
-  if (!name || !email || !password || !departmentId) {
-    return res.status(400).json({ message: 'All fields are required.' })
-  }
-
-  try {
-    // Check email isn't already taken
-    const [existing] = await poolPromise.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    )
-    if (existing.length > 0) {
-      return res.status(400).json({ message: 'An account with this email already exists.' })
-    }
-
-    // Get the faculty from the chosen department
-    const [deptRows] = await poolPromise.query(
-      'SELECT faculty_id FROM departments WHERE id = ?',
-      [departmentId]
-    )
-    const facultyId = deptRows.length > 0 ? deptRows[0].faculty_id : null
-
-    // Create the external examiner account
-    await poolPromise.query(
-      'INSERT INTO users (name, email, password, role, faculty_id, department_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, email, password, 'examiner', facultyId, departmentId]
-    )
-
-    res.json({ message: 'External examiner account created successfully!' })
-  } catch (err) {
-    console.error('Create examiner error:', err)
-    res.status(500).json({ message: 'Server error' })
-  }
-})
 
 // GET /api/auth/demo-examiners
 // Returns examiner accounts WITH credentials for the demo login dropdown (DEV ONLY)
@@ -477,7 +439,7 @@ router.get('/faculty-staff', async (req, res) => {
   const { facultyId } = req.query
   try {
     let query =
-      "SELECT u.id, u.name, u.email, u.role, u.department_id, d.name as department_name " +
+    "SELECT u.id, u.name, u.email, u.role, u.faculty_id, u.department_id, d.name as department_name " +
       "FROM users u LEFT JOIN departments d ON u.department_id = d.id " +
       "WHERE u.role IN ('supervisor', 'coordinator')"
     const params = []
@@ -516,6 +478,51 @@ router.put('/assign-coordinator', async (req, res) => {
     res.json({ message: makeCoordinator ? 'Coordinator assigned successfully!' : 'Coordinator role removed.' })
   } catch (err) {
     console.error('Assign coordinator error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/auth/faculties
+// All faculties with their current Faculty HDC Representative (Super Admin view)
+router.get('/faculties', async (req, res) => {
+  try {
+    const [rows] = await poolPromise.query(
+      "SELECT f.id, f.name, r.id as rep_id, r.name as rep_name, r.email as rep_email " +
+      "FROM faculties f " +
+      "LEFT JOIN users r ON r.faculty_id = f.id AND r.role = 'faculty_rep' " +
+      "GROUP BY f.id, f.name, r.id, r.name, r.email " +
+      "ORDER BY f.name"
+    )
+    res.json(rows)
+  } catch (err) {
+    console.error('Faculties error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/auth/assign-faculty-rep
+// Super Admin appoints a Faculty HDC Representative for a faculty
+router.put('/assign-faculty-rep', async (req, res) => {
+  const { userId, facultyId } = req.body
+  try {
+    // Step the current rep of this faculty back to supervisor (one rep per faculty)
+    await poolPromise.query(
+      "UPDATE users SET role = 'supervisor' WHERE role = 'faculty_rep' AND faculty_id = ?",
+      [facultyId]
+    )
+    // Promote the chosen staff member
+    await poolPromise.query(
+      "UPDATE users SET role = 'faculty_rep', faculty_id = ? WHERE id = ?",
+      [facultyId, userId]
+    )
+    await poolPromise.query(
+      'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+      [userId, 'Appointed as Faculty HDC Representative',
+       'You have been appointed as the Faculty HDC Representative for your faculty.']
+    )
+    res.json({ message: 'Faculty Representative assigned successfully!' })
+  } catch (err) {
+    console.error('Assign faculty rep error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

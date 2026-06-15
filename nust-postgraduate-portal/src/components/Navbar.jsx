@@ -19,7 +19,9 @@ const navLinks = {
     { label: 'Submissions', path: '/hod/submissions' },
     { label: 'Proposal Decisions', path: '/hod/hdc-decision' },
     { label: 'Deadlines', path: '/hod/deadlines' },
+    { label: 'Schedule Defence', path: '/coordinator/schedule-defence' },
     { label: 'Manage Results', path: '/hod/results' }
+    
   ],
   supervisor: [
     { label: 'Dashboard', path: '/supervisor' },
@@ -33,6 +35,11 @@ const navLinks = {
     { label: 'Dashboard', path: '/faculty-rep' },
     { label: 'Assign Coordinators', path: '/faculty-rep/assign-coordinator' },
     { label: 'Faculty Approvals', path: '/faculty-rep/approvals' }
+  ],
+
+  super_admin: [
+    { label: 'Dashboard', path: '/superadmin' },
+    { label: 'Faculty Representatives', path: '/superadmin/faculty-reps' }
   ],
   
   examiner: [

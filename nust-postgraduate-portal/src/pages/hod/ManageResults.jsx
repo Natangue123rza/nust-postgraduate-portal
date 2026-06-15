@@ -46,78 +46,58 @@ function ManageResults() {
 const calculateResult = (studentDegree, activeEvals) => {
     if (activeEvals.length === 0) return null
 
-    // All the marks that currently count (voided ones are already excluded)
+    // Masters expects 2 marks (supervisor + 1 external), PhD expects 3 (supervisor + 2 external)
+    const expected = studentDegree === 'PhD' ? 3 : 2
     const marks = activeEvals.map(function (e) { return e.total_mark })
 
-   // Masters: 1 internal (supervisor) + 1 external = 2 marks expected
-    if (studentDegree === 'Masters') {
-      if (marks.length < 2) {
-        return {
-          finalMark: null,
-          discrepancy: false,
-          status: 'Awaiting Examiners',
-          message: 'Waiting for all examiner marks (' + marks.length + ' of 2 submitted)'
-        } 
-      }
-
-      const highest = Math.max.apply(null, marks)
-      const lowest = Math.min.apply(null, marks)
-      const spread = highest - lowest
-
-      if (spread > 20) {
-        return {
-          finalMark: null,
-          discrepancy: true,
-          difference: spread,
-          status: 'Discrepancy — Requires Review',
-          message: '⚠️ ' + spread + ' point spread between examiners (' + marks.join(', ') + ')'
-        }
-      }
-
-      const sum = marks.reduce(function (a, b) { return a + b }, 0)
-      const average = Math.round(sum / marks.length)
+    if (marks.length < expected) {
       return {
-        finalMark: average,
+        finalMark: null,
         discrepancy: false,
-        status: 'Ready to Release',
-        message: 'Final mark: ' + average + '/100 (average of ' + marks.join(', ') + ')'
+        status: 'Awaiting Examiners',
+        message: 'Waiting for all examiner marks (' + marks.length + ' of ' + expected + ' submitted)'
       }
     }
 
-    // PhD: 1 internal (supervisor) + 2 external = 3 marks expected
-    if (studentDegree === 'PhD') {
-      if (marks.length < 3) {
-        return {
-          finalMark: null,
-          discrepancy: false,
-          status: 'Awaiting Examiners',
-          message: 'Waiting for all examiner marks (' + marks.length + ' of 3 submitted)'
-        }
-      }
+    // Find the largest group of marks within 20 of each other (the examiners who agree)
+    const sorted = marks.slice().sort(function (a, b) { return a - b })
+    let bestStart = 0
+    let bestLen = 1
+    for (let i = 0; i < sorted.length; i++) {
+      let j = i
+      while (j < sorted.length && sorted[j] - sorted[i] <= 20) { j++ }
+      if (j - i > bestLen) { bestLen = j - i; bestStart = i }
+    }
 
-      const highest = Math.max.apply(null, marks)
-      const lowest = Math.min.apply(null, marks)
-      const spread = highest - lowest
-
-      // Discrepancy = the gap between the highest and lowest mark is too wide
-      if (spread > 10) {
-        return {
-          finalMark: null,
-          discrepancy: true,
-          difference: spread,
-          status: 'Discrepancy — Requires Review',
-          message: '⚠️ ' + spread + ' point spread between examiners (' + marks.join(', ') + ')'
-        }
-      }
-
-      const sum = marks.reduce(function (a, b) { return a + b }, 0)
-      const average = Math.round(sum / marks.length)
+    // No two examiners are within 20 of each other -> genuine discrepancy
+    if (bestLen < 2) {
+      const spread = sorted[sorted.length - 1] - sorted[0]
       return {
-        finalMark: average,
-        discrepancy: false,
-        status: 'Ready to Release',
-        message: 'Final mark: ' + average + '/100 (average of ' + marks.join(', ') + ')'
+        finalMark: null,
+        discrepancy: true,
+        difference: spread,
+        status: 'Discrepancy — Requires Review',
+        message: '⚠️ Examiners disagree (' + marks.join(', ') + '). No two marks are within 20.'
       }
+    }
+
+    const agreeing = sorted.slice(bestStart, bestStart + bestLen)
+    const excluded = sorted.filter(function (m, idx) {
+      return idx < bestStart || idx >= bestStart + bestLen
+    })
+    const sum = agreeing.reduce(function (a, b) { return a + b }, 0)
+    const average = Math.round(sum / agreeing.length)
+
+    let message = 'Final mark: ' + average + '/100 (average of ' + agreeing.join(', ') + ')'
+    if (excluded.length > 0) {
+      message += ' — outlier excluded: ' + excluded.join(', ')
+    }
+
+    return {
+      finalMark: average,
+      discrepancy: false,
+      status: 'Ready to Release',
+      message: message
     }
   }
 
@@ -299,7 +279,7 @@ const calculateResult = (studentDegree, activeEvals) => {
                           </span>
                         ))}
                       </div>
-                      <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
                         <strong>Recommendation:</strong> {
                           evaluation.recommendation === 'a' ? 'Accept as is' :
                           evaluation.recommendation === 'b' ? 'Minor corrections' :
@@ -307,6 +287,38 @@ const calculateResult = (studentDegree, activeEvals) => {
                           evaluation.recommendation === 'd' ? 'Reject' : 'N/A'
                         }
                       </p>
+
+                      {/* Examiner's comments — the justification for the marks */}
+                      {evaluation.overall_assessment && (
+                        <div style={{
+                          backgroundColor: 'white', border: '1px solid #e0e0e0',
+                          borderRadius: '4px', padding: '10px', marginTop: '10px'
+                        }}>
+                          <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#8B0000', margin: '0 0 4px 0', letterSpacing: '0.5px' }}>
+                            EXAMINER'S COMMENTS
+                          </p>
+                          <p style={{ fontSize: '12px', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                            {evaluation.overall_assessment}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Per-section comments, if the examiner left any */}
+                      {[evaluation.comment_a, evaluation.comment_b, evaluation.comment_c, evaluation.comment_d, evaluation.comment_e].some(c => c) && (
+                        <div style={{ marginTop: '8px' }}>
+                          {[
+                            { label: 'A', text: evaluation.comment_a },
+                            { label: 'B', text: evaluation.comment_b },
+                            { label: 'C', text: evaluation.comment_c },
+                            { label: 'D', text: evaluation.comment_d },
+                            { label: 'E', text: evaluation.comment_e }
+                          ].filter(s => s.text).map(s => (
+                            <p key={s.label} style={{ fontSize: '11px', color: '#555', margin: '2px 0' }}>
+                              <strong>Section {s.label}:</strong> {s.text}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
 

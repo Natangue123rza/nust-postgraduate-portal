@@ -25,7 +25,8 @@ function Login() {
     { label: 'CS — PhD Student', email: '221098765@nust.na', password: 'phd123' },
      { label: 'CS — PhD Student2', email: '211937536@nust.na', password: 'victoria123' },
     { label: 'CS — Coordinator', email: 'coordinator@nust.na', password: 'coord123' },
-    { label: 'FCI — Faculty HDC Rep', email: 'faculty.rep@nust.na', password: 'rep123' },
+   { label: 'FCI — Faculty HDC Rep', email: 'faculty.rep@nust.na', password: 'rep123' },
+    { label: 'System — Super Admin', email: 'superadmin@nust.na', password: 'super123' },
     { label: 'CS — Supervisor', email: 'fili.nghidengwa@nust.na', password: 'supervisor123' },
     { label: 'Civil — PhD Student', email: '223009988@nust.na', password: 'student123' },
      { label: 'Civil — PhD Student2', email: '220847145@nust.na', password: 'ndeya123' },
@@ -116,8 +117,8 @@ if (data.user.role === 'student') {
   navigate('/coordinator')
 } else if (data.user.role === 'faculty_rep') {
   navigate('/faculty-rep')
-} else if (data.user.role === 'admin_staff') {
-  navigate('/admin')
+} else if (data.user.role === 'super_admin') {
+  navigate('/superadmin')
 } else {
   navigate('/dashboard')
 }

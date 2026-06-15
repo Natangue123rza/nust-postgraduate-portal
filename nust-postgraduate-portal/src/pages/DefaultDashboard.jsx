@@ -1,26 +1,9 @@
 // src/pages/DefaultDashboard.jsx
+import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
 
-// Sample data — in production these come from the database (managed by the faculty office)
-const upcomingPresentations = [
-  {
-    name: 'Paulina Efriam', degree: 'PhD',
-    title: 'Machine Learning Approaches to Drought Prediction in Namibia',
-    date: '18 June 2026', time: '10:00', venue: 'FCI Boardroom, Block 9'
-  },
-  {
-    name: 'Johannes Amukwa', degree: 'PhD',
-    title: 'Sustainable Concrete Mixtures Using Locally Sourced Aggregates',
-    date: '20 June 2026', time: '14:00', venue: 'Engineering Auditorium'
-  },
-  {
-    name: 'David Mbidi', degree: 'Masters',
-    title: 'A Web-Based Postgraduate Research Management Portal',
-    date: '24 June 2026', time: '09:00', venue: 'FCI Boardroom, Block 9'
-  }
-]
-
+// Announcements are still sample data; in production they would come from the database
 const announcements = [
   {
     title: 'Call for Semester 2 Proposal Submissions',
@@ -42,6 +25,19 @@ const announcements = [
 function DefaultDashboard() {
 
   const { user } = useAuth()
+  const [presentations, setPresentations] = useState([])
+
+  useEffect(() => {
+    const fetchUpcoming = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/presentations/upcoming')
+        setPresentations(await res.json())
+      } catch (err) {
+        console.error('Error fetching presentations:', err)
+      }
+    }
+    fetchUpcoming()
+  }, [])
 
   return (
     <div>
@@ -49,7 +45,6 @@ function DefaultDashboard() {
 
       <div style={{ padding: '30px', maxWidth: '1280px', margin: '0 auto' }}>
 
-        {/* Welcome banner */}
         <div style={{
           backgroundColor: '#002147', color: 'white',
           padding: '25px 30px', borderRadius: '8px', marginBottom: '25px'
@@ -60,13 +55,11 @@ function DefaultDashboard() {
           </p>
         </div>
 
-        {/* Intro */}
         <p style={{ color: '#555', fontSize: '14px', marginBottom: '25px', lineHeight: 1.5 }}>
           Here's what's happening in postgraduate research at NUST — upcoming thesis
           defences and faculty announcements.
         </p>
 
-        {/* Upcoming presentations */}
         <h2 style={{
           color: '#002147', fontSize: '18px', marginBottom: '15px',
           borderLeft: '4px solid #8B0000', paddingLeft: '10px'
@@ -74,41 +67,51 @@ function DefaultDashboard() {
           🎓 Upcoming Presentations & Defences
         </h2>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '15px', marginBottom: '35px'
-        }}>
-          {upcomingPresentations.map((p, i) => (
-            <div key={i} style={{
-              backgroundColor: 'white', border: '1px solid #dddddd',
-              borderTop: '4px solid ' + (p.degree === 'PhD' ? '#8B0000' : '#002147'),
-              borderRadius: '8px', padding: '18px 20px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'bold', color: '#002147', fontSize: '14px' }}>{p.name}</span>
-                <span style={{
-                  backgroundColor: p.degree === 'PhD' ? '#8B0000' : '#002147', color: 'white',
-                  padding: '2px 10px', borderRadius: '12px', fontSize: '11px'
-                }}>
-                  {p.degree}
-                </span>
+        {presentations.length === 0 ? (
+          <p style={{ color: '#666', fontSize: '14px', marginBottom: '35px' }}>
+            No upcoming defences are scheduled at the moment.
+          </p>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '15px', marginBottom: '35px'
+          }}>
+            {presentations.map(p => (
+              <div key={p.id} style={{
+                backgroundColor: 'white', border: '1px solid #dddddd',
+                borderTop: '4px solid ' + (p.degree === 'PhD' ? '#8B0000' : '#002147'),
+                borderRadius: '8px', padding: '18px 20px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#002147', fontSize: '14px' }}>{p.student_name}</span>
+                  <span style={{
+                    backgroundColor: p.degree === 'PhD' ? '#8B0000' : '#002147', color: 'white',
+                    padding: '2px 10px', borderRadius: '12px', fontSize: '11px'
+                  }}>
+                    {p.degree}
+                  </span>
+                </div>
+                {p.title && (
+                  <p style={{ fontSize: '13px', color: '#333', margin: '0 0 12px 0', lineHeight: 1.4 }}>
+                    {p.title}
+                  </p>
+                )}
+                <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>
+                  📅 {p.defence_date ? new Date(p.defence_date).toLocaleDateString() : 'TBC'}
+                  {p.defence_time ? ' at ' + p.defence_time : ''}
+                </p>
+                {p.venue && (
+                  <p style={{ fontSize: '12px', color: '#666', margin: '3px 0 0 0' }}>
+                    📍 {p.venue}
+                  </p>
+                )}
               </div>
-              <p style={{ fontSize: '13px', color: '#333', margin: '0 0 12px 0', lineHeight: 1.4 }}>
-                {p.title}
-              </p>
-              <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>
-                📅 {p.date} at {p.time}
-              </p>
-              <p style={{ fontSize: '12px', color: '#666', margin: '3px 0 0 0' }}>
-                📍 {p.venue}
-              </p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* Announcements */}
         <h2 style={{
           color: '#002147', fontSize: '18px', marginBottom: '15px',
           borderLeft: '4px solid #8B0000', paddingLeft: '10px'
@@ -132,7 +135,6 @@ function DefaultDashboard() {
           ))}
         </div>
 
-        {/* Account note */}
         <div style={{
           backgroundColor: '#f0f7ff', border: '1px solid #002147',
           padding: '15px 20px', borderRadius: '8px', fontSize: '13px', color: '#002147'

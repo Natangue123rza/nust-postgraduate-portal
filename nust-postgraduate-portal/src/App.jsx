@@ -27,11 +27,12 @@ import ReviewSubmissions from './pages/supervisor/ReviewSubmissions'
 import GradeThesis from './pages/supervisor/GradeThesis'
 import DefaultDashboard from './pages/DefaultDashboard'
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import ManageExaminers from './pages/admin/ManageExaminers'
 import FacultyRepDashboard from './pages/facultyrep/FacultyRepDashboard'
 import AssignCoordinator from './pages/facultyrep/AssignCoordinator'
 import FacultyApprovals from './pages/facultyrep/FacultyApprovals'
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard'
+import ManageFacultyReps from './pages/superadmin/ManageFacultyReps'
+import ScheduleDefence from './pages/coordinator/ScheduleDefence'
 
 function App() {
   return (
@@ -214,20 +215,6 @@ function App() {
         </ProtectedRoute>
       } />
 
-      {/* Admin dashboard */}
-      <Route path="/admin" element={
-        <ProtectedRoute allowedRoles={['admin_staff']}>
-          <AdminDashboard />
-        </ProtectedRoute>
-      } />
-
-      {/* Admin manage examiners */}
-      <Route path="/admin/examiners" element={
-        <ProtectedRoute allowedRoles={['admin_staff']}>
-          <ManageExaminers />
-        </ProtectedRoute>
-      } />
-
       {/* Faculty HDC Representative */}
       <Route path="/faculty-rep" element={
         <ProtectedRoute allowedRoles={['faculty_rep']}>
@@ -242,6 +229,23 @@ function App() {
       <Route path="/faculty-rep/approvals" element={
         <ProtectedRoute allowedRoles={['faculty_rep']}>
           <FacultyApprovals />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/superadmin" element={
+        <ProtectedRoute allowedRoles={['super_admin']}>
+          <SuperAdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/superadmin/faculty-reps" element={
+        <ProtectedRoute allowedRoles={['super_admin']}>
+          <ManageFacultyReps />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/coordinator/schedule-defence" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <ScheduleDefence />
         </ProtectedRoute>
       } />
 
