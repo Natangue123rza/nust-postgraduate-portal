@@ -82,8 +82,8 @@ function FacultyApprovals() {
           padding: '25px 30px', borderRadius: '8px', marginBottom: '20px'
         }}>
           <h1 style={{ margin: 0, fontSize: '20px' }}>Faculty Approvals</h1>
-          <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
-            Record the faculty-level approval for proposals endorsed by coordinators
+       <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
+            Present coordinator-endorsed proposals at the HDC and record the committee's outcome
           </p>
         </div>
 
@@ -107,7 +107,7 @@ function FacultyApprovals() {
         )}
 
         {!loading && proposals.map(p => {
-          const decided = p.faculty_status === 'Approved' || p.faculty_status === 'Rejected'
+         const decided = p.faculty_status === 'Approved' || p.faculty_status === 'Revision'
           return (
             <div key={p.id} style={{
               backgroundColor: 'white', border: '1px solid #dddddd',
@@ -130,15 +130,25 @@ function FacultyApprovals() {
                 <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#002147', margin: '0 0 10px 0' }}>
                   Approval Trail
                 </p>
-                {trailStep('Supervisor', true, (p.supervisor_name || 'Supervisor') + ' approved')}
-                {trailStep('Coordinator', true, 'Approved and forwarded to faculty')}
+              {trailStep('Supervisor', true, (p.supervisor_name || 'Supervisor') + ' approved')}
+                {p.supervisor_comments && (
+                  <p style={{ fontSize: '12px', color: '#555', margin: '0 0 8px 28px', fontStyle: 'italic' }}>
+                    "{p.supervisor_comments}"
+                  </p>
+                )}
+                {trailStep('Coordinator', true, 'Reviewed and forwarded to faculty')}
+                {p.hdc_comments && (
+                  <p style={{ fontSize: '12px', color: '#555', margin: '0 0 8px 28px', fontStyle: 'italic' }}>
+                    "{p.hdc_comments}"
+                  </p>
+                )}
                 {trailStep(
-                  'Faculty (HDC)',
+                  'Faculty / HDC',
                   decided,
                   decided
-                    ? (p.faculty_status + ' by ' + (p.faculty_approver_name || 'Faculty Rep') +
+                    ? (p.faculty_status + ' — recorded by ' + (p.faculty_approver_name || 'Faculty Rep') +
                        (p.faculty_approved_at ? ' on ' + new Date(p.faculty_approved_at).toLocaleDateString() : ''))
-                    : 'Awaiting your decision'
+                    : 'Awaiting HDC meeting'
                 )}
               </div>
 
@@ -154,22 +164,28 @@ function FacultyApprovals() {
                 </a>
               )}
 
-              {decided ? (
+          {decided ? (
                 <div style={{
-                  backgroundColor: p.faculty_status === 'Approved' ? '#e6f4ea' : '#fce4e4',
-                  border: '1px solid ' + (p.faculty_status === 'Approved' ? '#4caf50' : '#ef5350'),
+                  backgroundColor: p.faculty_status === 'Approved' ? '#e6f4ea' : '#fff3e0',
+                  border: '1px solid ' + (p.faculty_status === 'Approved' ? '#4caf50' : '#ff9800'),
                   padding: '12px 15px', borderRadius: '6px', fontSize: '13px',
-                  color: p.faculty_status === 'Approved' ? '#2e7d32' : '#c62828'
+                  color: p.faculty_status === 'Approved' ? '#2e7d32' : '#e65100'
                 }}>
-                  Faculty decision: <strong>{p.faculty_status}</strong>
+                  HDC outcome: <strong>{p.faculty_status === 'Approved' ? 'Approved' : 'Revisions requested'}</strong>
                   {p.faculty_comments ? ' — ' + p.faculty_comments : ''}
                 </div>
               ) : (
-                <div>
+                <div style={{ border: '1px solid #dddddd', borderRadius: '6px', padding: '15px', marginTop: '5px' }}>
+                  <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#002147', margin: '0 0 4px 0' }}>
+                    Record the HDC meeting outcome
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#666', margin: '0 0 10px 0' }}>
+                    You present this proposal at the HDC and record the committee's decision and feedback below.
+                  </p>
                   <textarea
                     value={comments[p.id] || ''}
                     onChange={(e) => setComments({ ...comments, [p.id]: e.target.value })}
-                    placeholder="Faculty committee comment..."
+                    placeholder="Feedback from the HDC meeting..."
                     rows={2}
                     style={{
                       width: '100%', padding: '10px', border: '1px solid #cccccc',
@@ -185,17 +201,17 @@ function FacultyApprovals() {
                         padding: '8px 16px', borderRadius: '4px', fontSize: '13px',
                         fontWeight: 'bold', cursor: saving === p.id ? 'not-allowed' : 'pointer'
                       }}>
-                      {saving === p.id ? '...' : '✅ Approve at Faculty Level'}
+                      {saving === p.id ? '...' : '✅ Record HDC Approval'}
                     </button>
                     <button
-                      onClick={() => handleDecision(p.id, 'rejected')}
+                      onClick={() => handleDecision(p.id, 'revision')}
                       disabled={saving === p.id}
                       style={{
-                        backgroundColor: 'transparent', color: '#c62828', border: '1px solid #c62828',
+                        backgroundColor: 'transparent', color: '#e65100', border: '1px solid #ff9800',
                         padding: '8px 16px', borderRadius: '4px', fontSize: '13px',
                         fontWeight: 'bold', cursor: saving === p.id ? 'not-allowed' : 'pointer'
                       }}>
-                      Reject
+                      Record HDC Feedback (Revisions)
                     </button>
                   </div>
                 </div>

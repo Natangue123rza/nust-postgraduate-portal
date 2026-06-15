@@ -33,6 +33,9 @@ import FacultyApprovals from './pages/facultyrep/FacultyApprovals'
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard'
 import ManageFacultyReps from './pages/superadmin/ManageFacultyReps'
 import ScheduleDefence from './pages/coordinator/ScheduleDefence'
+import HdcResults from './pages/facultyrep/HdcResults'
+import ReleaseResults from './pages/supervisor/ReleaseResults'
+import AssignProposalEvaluators from './pages/coordinator/AssignProposalEvaluators'
 
 function App() {
   return (
@@ -246,6 +249,23 @@ function App() {
       <Route path="/coordinator/schedule-defence" element={
         <ProtectedRoute allowedRoles={['coordinator']}>
           <ScheduleDefence />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/faculty-rep/hdc-results" element={
+        <ProtectedRoute allowedRoles={['faculty_rep']}>
+          <HdcResults />
+        </ProtectedRoute>
+      } />
+      <Route path="/supervisor/release-results" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <ReleaseResults />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/coordinator/proposal-evaluators" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <AssignProposalEvaluators />
         </ProtectedRoute>
       } />
 

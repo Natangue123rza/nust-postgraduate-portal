@@ -20,6 +20,7 @@ const navLinks = {
     { label: 'Proposal Decisions', path: '/hod/hdc-decision' },
     { label: 'Deadlines', path: '/hod/deadlines' },
     { label: 'Schedule Defence', path: '/coordinator/schedule-defence' },
+    { label: 'Proposal Evaluators', path: '/coordinator/proposal-evaluators' },
     { label: 'Manage Results', path: '/hod/results' }
     
   ],
@@ -28,13 +29,16 @@ const navLinks = {
     { label: 'My Students', path: '/supervisor/students' },
     { label: 'Review Submissions', path: '/supervisor/review' },
     { label: 'Progress Reports', path: '/supervisor/progress-reports' },
+    { label: 'Release Marks', path: '/supervisor/release-results' },
     { label: 'Grade Thesis', path: '/supervisor/grade' }
   ],
 
  faculty_rep: [
     { label: 'Dashboard', path: '/faculty-rep' },
     { label: 'Assign Coordinators', path: '/faculty-rep/assign-coordinator' },
+    { label: 'HDC Results', path: '/faculty-rep/hdc-results' },
     { label: 'Faculty Approvals', path: '/faculty-rep/approvals' }
+
   ],
 
   super_admin: [

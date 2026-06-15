@@ -444,38 +444,93 @@ router.get('/faculty', async (req, res) => {
 })
 
 // PUT /api/proposals/faculty-approve/:proposalId
-// Faculty Rep records the faculty-level decision (who + when)
+// Faculty Rep records the outcome of the HDC meeting (the Rep relays, the HDC decides)
 router.put('/faculty-approve/:proposalId', async (req, res) => {
   const { proposalId } = req.params
   const { approverId, decision, comments } = req.body
   try {
-    const facultyStatus = decision === 'approved' ? 'Approved' : 'Rejected'
+    const facultyStatus = decision === 'approved' ? 'Approved' : 'Revision'
     await poolPromise.query(
       'UPDATE proposals SET faculty_status = ?, faculty_approved_by = ?, faculty_comments = ?, faculty_approved_at = NOW() WHERE id = ?',
       [facultyStatus, approverId, comments || null, proposalId]
     )
 
-    const [rows] = await poolPromise.query(
-      'SELECT student_id FROM proposals WHERE id = ?',
-      [proposalId]
-    )
+    const [rows] = await poolPromise.query('SELECT student_id FROM proposals WHERE id = ?', [proposalId])
     const studentId = rows.length > 0 ? rows[0].student_id : null
     if (studentId) {
       await poolPromise.query(
         'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
         [
           studentId,
-          decision === 'approved' ? 'Proposal Approved at Faculty Level' : 'Proposal Not Approved at Faculty Level',
+          decision === 'approved' ? 'Proposal Approved by HDC' : 'HDC Feedback on Your Proposal',
           decision === 'approved'
-            ? 'Your proposal has received faculty-level approval.'
-            : 'Your proposal was not approved at faculty level. Please check the feedback.'
+            ? 'Your proposal has been approved by the Higher Degrees Committee.'
+            : 'The Higher Degrees Committee has reviewed your proposal and requested revisions. Please check the feedback with your supervisor.'
         ]
       )
     }
 
-    res.json({ message: 'Faculty decision recorded.' })
+    res.json({ message: 'HDC outcome recorded.' })
   } catch (err) {
     console.error('Faculty approve error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// POST /api/proposals/assign-evaluator
+// Coordinator assigns an evaluator to review a proposal (feedback only, no grading)
+router.post('/assign-evaluator', async (req, res) => {
+  const { proposalId, evaluatorId } = req.body
+  try {
+    const [existing] = await poolPromise.query(
+      'SELECT id FROM proposal_reviews WHERE proposal_id = ? AND evaluator_id = ?',
+      [proposalId, evaluatorId]
+    )
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'This evaluator is already assigned to this proposal.' })
+    }
+    await poolPromise.query(
+      'INSERT INTO proposal_reviews (proposal_id, evaluator_id) VALUES (?, ?)',
+      [proposalId, evaluatorId]
+    )
+    const [pr] = await poolPromise.query(
+      'SELECT p.title, u.name as student_name FROM proposals p JOIN users u ON p.student_id = u.id WHERE p.id = ?',
+      [proposalId]
+    )
+    const title = pr.length > 0 ? pr[0].title : 'a proposal'
+    await poolPromise.query(
+      'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+      [evaluatorId, 'Proposal to Review',
+       'You have been assigned to review the proposal "' + title + '". Please provide feedback and your decision.']
+    )
+    res.json({ message: 'Evaluator assigned successfully!' })
+  } catch (err) {
+    console.error('Assign evaluator error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/proposals/reviews-all?departmentId=X
+// All proposal reviews in a department (coordinator overview)
+router.get('/reviews-all', async (req, res) => {
+  const { departmentId } = req.query
+  try {
+    let query =
+      "SELECT pr.id, pr.proposal_id, pr.evaluator_id, pr.feedback, pr.status, " +
+      "ev.name as evaluator_name, p.title as proposal_title, p.student_id, u.name as student_name " +
+      "FROM proposal_reviews pr " +
+      "JOIN proposals p ON pr.proposal_id = p.id " +
+      "JOIN users u ON p.student_id = u.id " +
+      "LEFT JOIN users ev ON pr.evaluator_id = ev.id"
+    const params = []
+    if (departmentId) {
+      query += ' WHERE u.department_id = ?'
+      params.push(departmentId)
+    }
+    const [rows] = await poolPromise.query(query, params)
+    res.json(rows)
+  } catch (err) {
+    console.error('Reviews-all error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

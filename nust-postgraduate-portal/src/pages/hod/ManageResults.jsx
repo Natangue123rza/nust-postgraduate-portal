@@ -101,18 +101,18 @@ const calculateResult = (studentDegree, activeEvals) => {
     }
   }
 
-  const handleRelease = async (studentId, studentName) => {
-    if (!window.confirm(`Release results to ${studentName}? This cannot be undone.`)) return
+const handleSubmitToHdc = async (studentId, studentName) => {
+    if (!window.confirm('Submit the marks for ' + studentName + ' to the HDC for approval?')) return
     setReleasing(studentId)
     try {
       const response = await fetch(
-        `http://localhost:5000/api/evaluations/release/${studentId}`,
+        'http://localhost:5000/api/evaluations/submit-to-hdc/' + studentId,
         { method: 'PUT' }
       )
       const data = await response.json()
       if (!response.ok) { alert(data.message); return }
-      alert(`✅ Results released to ${studentName}!`)
-      const evalsRes = await fetch('http://localhost:5000/api/evaluations/all')
+      alert(data.message)
+      const evalsRes = await fetch('http://localhost:5000/api/evaluations/all?departmentId=' + user.department_id)
       setEvaluations(await evalsRes.json())
     } catch (err) {
       alert('Could not connect to server.')
@@ -189,6 +189,7 @@ const calculateResult = (studentDegree, activeEvals) => {
           const voidedEvals = getVoidedEvals(student.id)
           const result = calculateResult(student.degree, activeEvals)
           const isReleased = activeEvals.length > 0 && activeEvals.every(e => e.is_released)
+          const submitted = activeEvals.length > 0 && activeEvals.every(e => e.submitted_to_hdc)
 
           return (
             <div key={student.id} style={{
@@ -335,20 +336,31 @@ const calculateResult = (studentDegree, activeEvals) => {
                     </div>
                   )}
 
-                  {/* Release button */}
-                  {result?.status === 'Ready to Release' && !isReleased && (
+              {/* Submit for HDC approval */}
+                  {result?.status === 'Ready to Release' && !submitted && !isReleased && (
                     <button
-                      onClick={() => handleRelease(student.id, student.name)}
+                      onClick={() => handleSubmitToHdc(student.id, student.name)}
                       disabled={releasing === student.id}
                       style={{
-                        backgroundColor: '#2e7d32', color: 'white',
+                        backgroundColor: '#002147', color: 'white',
                         border: 'none', padding: '10px 20px',
                         borderRadius: '4px', fontSize: '14px',
                         fontWeight: 'bold', cursor: 'pointer',
                         marginBottom: '10px'
                       }}>
-                      {releasing === student.id ? 'Releasing...' : '✅ Approve & Release to Student'}
+                      {releasing === student.id ? 'Submitting...' : 'Submit for HDC Approval'}
                     </button>
+                  )}
+
+                  {/* Submitted — awaiting HDC, then supervisor release */}
+                  {submitted && !isReleased && (
+                    <div style={{
+                      backgroundColor: '#e3f2fd', border: '1px solid #2196f3',
+                      padding: '10px 15px', borderRadius: '6px', fontSize: '13px',
+                      color: '#1565c0', marginBottom: '10px'
+                    }}>
+                      Submitted for HDC approval. Once the HDC approves, the supervisor releases the mark to the student.
+                    </div>
                   )}
 
                   {/* Discrepancy warning */}
