@@ -1,4 +1,4 @@
-// src/pages/hod/HODDashboard.jsx
+// src/pages/coordinator/HODDashboard.jsx
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
@@ -66,11 +66,13 @@ function HODDashboard() {
   let readyToRelease = 0
   let discrepancies = 0
   Object.values(activeByStudent).forEach(({ degree, evals }) => {
-    const released = evals.length > 0 && evals.every(ev => ev.is_released)
+   const released = evals.length > 0 && evals.every(ev => ev.is_released)
     if (released) return
+    const submitted = evals.length > 0 && evals.every(ev => ev.submitted_to_hdc)
+    if (submitted) return
     if (degree === 'Masters' && evals.length >= 1) readyToRelease++
     else if (degree === 'PhD' && evals.length >= 2) {
-      if (Math.abs(evals[0].total_mark - evals[1].total_mark) > 10) discrepancies++
+    if (Math.abs(evals[0].total_mark - evals[1].total_mark) > 20) discrepancies++
       else readyToRelease++
     }
   })
@@ -149,10 +151,10 @@ function HODDashboard() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
           gap: '15px', marginBottom: '25px'
         }}>
-          {[
-            { count: proposalsAwaitingHDC, label: 'Proposals awaiting HDC decision', color: '#e65100', bg: '#fff3e0', route: '/hod/hdc-decision' },
+        {[
+            { count: proposalsAwaitingHDC, label: 'Proposals to review & assign evaluators', color: '#e65100', bg: '#fff3e0', route: '/coordinator/proposal-evaluators' },
             { count: thesesAwaitingExaminers, label: 'Theses awaiting examiner assignment', color: '#e65100', bg: '#fff3e0', route: '/hod/assign-examiners' },
-            { count: readyToRelease, label: 'Results ready to release', color: '#2e7d32', bg: '#e6f4ea', route: '/hod/results' },
+            { count: readyToRelease, label: 'Results ready to submit for HDC', color: '#2e7d32', bg: '#e6f4ea', route: '/hod/results' },
             { count: discrepancies, label: 'Mark discrepancies to review', color: '#c62828', bg: '#fce4e4', route: '/hod/results' }
           ].map((card, i) => (
             <div key={i} onClick={() => navigate(card.route)} style={{
@@ -200,135 +202,7 @@ function HODDashboard() {
           ))}
         </div>
 
-        {/* Section title */}
-        <h2 style={{
-          color: '#002147',
-          marginBottom: '20px',
-          fontSize: '18px',
-          borderLeft: '4px solid #8B0000',
-          paddingLeft: '10px'
-        }}>
-          HOD Actions
-        </h2>
-
- {/* Cards */}
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-
-          {/* Assign Supervisors */}
-          <div
-            onClick={() => navigate('/coordinator/assign-supervisor')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              👥 Assign Supervisors
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Assign main and co-supervisors to students
-            </p>
-          </div>
-
-          {/* Assign Examiners */}
-          <div
-            onClick={() => navigate('/hod/assign-examiners')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              👤 Assign Examiners
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Assign external examiners to Masters and PhD students
-            </p>
-          </div>
-
-          {/* View Submissions */}
-          <div
-            onClick={() => navigate('/hod/submissions')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              📋 View Submissions
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              View all supervisor-approved student submissions
-            </p>
-          </div>
-
-          {/* HDC Decision */}
-          <div
-            onClick={() => navigate('/hod/hdc-decision')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              ✅ HDC Decision
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Record HDC committee proposal decisions
-            </p>
-          </div>
-
-          {/* Set Deadlines */}
-          <div
-            onClick={() => navigate('/hod/deadlines')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              ⏰ Set Deadlines
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Set submission deadlines for proposals and theses
-            </p>
-          </div>
-
-          {/* Manage Results */}
-          <div
-            onClick={() => navigate('/hod/results')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #8B0000',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#8B0000', marginBottom: '10px' }}>
-              🎯 Manage Results
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Review examiner marks and release results to students
-            </p>
-          </div>
-
-        </div>
+      
       </div>
     </div>
   )

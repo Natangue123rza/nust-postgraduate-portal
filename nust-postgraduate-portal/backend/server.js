@@ -24,6 +24,8 @@ const uploadRoutes = require('./routes/uploads')
 const notificationRoutes = require('./routes/notifications')
 const assignmentRoutes = require('./routes/assignments')
 const presentationRoutes = require('./routes/presentations')
+const messageRoutes = require('./routes/messages')
+const semesterRoutes = require('./routes/semesters')
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -37,6 +39,8 @@ app.use('/api/uploads', uploadRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/assignments', assignmentRoutes)
 app.use('/api/presentations', presentationRoutes)
+app.use('/api/messages', messageRoutes)
+app.use('/api/semesters', semesterRoutes)
 
 // Test route
 app.get('/', (req, res) => {

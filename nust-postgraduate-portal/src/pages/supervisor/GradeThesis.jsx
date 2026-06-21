@@ -68,16 +68,19 @@ function GradeThesis() {
     fetchStudents()
   }, [user.id])
 
-  // Check existing evaluation
+ // Check existing evaluation — look across THIS examiner's own submissions
+  // (released or not) so the form locks immediately after submitting.
   useEffect(() => {
     if (!selectedStudent) return
     const checkExisting = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/evaluations/student/${selectedStudent.id}`
+          'http://localhost:5000/api/evaluations/examiner/' + user.id
         )
         const data = await response.json()
-        const myEval = data.find(e => e.examiner_id === user.id)
+        const myEval = Array.isArray(data)
+          ? data.find(e => Number(e.student_id) === Number(selectedStudent.id))
+          : null
         setExistingEvaluation(myEval || null)
       } catch (err) {
         console.error('Error:', err)

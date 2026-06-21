@@ -1,4 +1,4 @@
-// src/pages/hod/SetAcademicPeriod.jsx
+// src/pages/coordinator/SetAcademicPeriod.jsx
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'

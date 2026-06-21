@@ -1,4 +1,4 @@
-// src/pages/hod/ViewSubmissions.jsx
+// src/pages/coordinator/ViewSubmissions.jsx
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
@@ -339,10 +339,20 @@ function ViewSubmissions() {
                                       padding: '4px 10px', borderRadius: '4px',
                                       fontSize: '11px', textDecoration: 'none'
                                     }}>
-                                    View ethics PDF
+                                View ethics PDF
                                   </a>
                                 )}
                               </div>
+
+                              {(prop.ethics_involves_humans || prop.ethics_data_methods || prop.ethics_risks || prop.ethics_consent_process || prop.ethics_data_protection) && (
+                                <div style={{ backgroundColor: '#f9f9f9', border: '1px solid #eeeeee', borderRadius: '4px', padding: '10px 12px', marginBottom: prop.ethics_status === 'Submitted' ? '8px' : 0 }}>
+                                  <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Involves human participants:</strong> {prop.ethics_involves_humans || '—'}</p>
+                                  <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Data collection methods:</strong> {prop.ethics_data_methods || '—'}</p>
+                                  <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Risks & mitigation:</strong> {prop.ethics_risks || '—'}</p>
+                                  <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Informed consent:</strong> {prop.ethics_consent_process || '—'}</p>
+                                  <p style={{ margin: 0, fontSize: '12px' }}><strong>Data protection:</strong> {prop.ethics_data_protection || '—'}</p>
+                                </div>
+                              )}
 
                               {prop.ethics_status === 'Submitted' && (
                                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

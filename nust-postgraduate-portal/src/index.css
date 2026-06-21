@@ -15,6 +15,7 @@ body{
   font-family: 'Segoe UI', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f5f5f5;
   color: #333333;
+
 }
 
 /* Make all buttons have a pointer cursor*/
@@ -34,3 +35,6 @@ a{
 
 * { box-sizing: border-box; }
 html, body { margin: 0; overflow-x: hidden; }
+body {
+  zoom: 1.2;
+}

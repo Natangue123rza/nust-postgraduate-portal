@@ -14,8 +14,7 @@ function ThesisSubmission() {
   const [abstract, setAbstract] = useState('')
   const [file, setFile] = useState(null)
   const [declaration, setDeclaration] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [deadlinePassed, setDeadlinePassed] = useState(false)
+const [submitted, setSubmitted] = useState(false)
   const [proposalApproved, setProposalApproved] = useState(false)
   const [checkingProposal, setCheckingProposal] = useState(true)
 
@@ -24,25 +23,7 @@ function ThesisSubmission() {
   const [loadingThesis, setLoadingThesis] = useState(true)
   const [isResubmitting, setIsResubmitting] = useState(false)
 
-  // Fetch deadline
-  useEffect(() => {
-    const fetchDeadline = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/deadlines/all')
-        const data = await response.json()
-        if (data.thesis) {
-          const deadline = new Date(data.thesis)
-          const now = new Date()
-          setDeadlinePassed(now > deadline)
-        }
-      } catch (err) {
-        console.error('Error fetching deadline:', err)
-      }
-    }
-    fetchDeadline()
-  }, [])
-
-  // Check proposal approved
+// Check proposal approved
   useEffect(() => {
     const checkProposal = async () => {
       try {
@@ -103,12 +84,8 @@ function ThesisSubmission() {
     setIsResubmitting(true)
   }
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
 
-    if (deadlinePassed) {
-      alert('The submission deadline has passed.')
-      return
-    }
     if (!title) { alert('Please enter your thesis title.'); return }
     if (!abstract) { alert('Please enter your thesis abstract.'); return }
     if (!file) { alert('Please upload your thesis PDF.'); return }
@@ -238,17 +215,16 @@ function ThesisSubmission() {
               </p>
             </div>
 
-            <button
+     <button
               onClick={startResubmission}
-              disabled={deadlinePassed}
               style={{
                 width: '100%', padding: '14px',
-                backgroundColor: deadlinePassed ? '#cccccc' : '#8B0000',
+                backgroundColor: '#8B0000',
                 color: 'white', border: 'none', borderRadius: '4px',
                 fontSize: '15px', fontWeight: 'bold',
-                cursor: deadlinePassed ? 'not-allowed' : 'pointer'
+                cursor: 'pointer'
               }}>
-              {deadlinePassed ? '❌ Submission Deadline Has Passed' : 'Revise & Resubmit Thesis'}
+              Revise & Resubmit Thesis
             </button>
           </div>
         )}
@@ -452,20 +428,17 @@ function ThesisSubmission() {
             </div>
 
             {/* Submit button */}
-            <button
+     <button
               onClick={handleSubmit}
-              disabled={deadlinePassed}
               style={{
                 width: '100%', padding: '14px',
-                backgroundColor: deadlinePassed ? '#cccccc' : '#002147',
+                backgroundColor: '#002147',
                 color: 'white', border: 'none', borderRadius: '4px',
                 fontSize: '16px', fontWeight: 'bold',
                 marginBottom: '30px',
-                cursor: deadlinePassed ? 'not-allowed' : 'pointer'
+                cursor: 'pointer'
               }}>
-              {deadlinePassed
-                ? '❌ Submission Deadline Has Passed'
-                : (isResubmitting ? 'Resubmit Thesis' : 'Submit Thesis')}
+              {isResubmitting ? 'Resubmit Thesis' : 'Submit Thesis'}
             </button>
 
           </div>

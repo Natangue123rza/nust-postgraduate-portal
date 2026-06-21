@@ -2,98 +2,70 @@
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../../components/LoadingSpinner'
 
 function AssignSupervisor() {
 
   const navigate = useNavigate()
-  const { user } = useAuth()
-
   const [students, setStudents] = useState([])
   const [supervisors, setSupervisors] = useState([])
-  const [selectedStudent, setSelectedStudent] = useState(null)
-  const [supervisor, setSupervisor] = useState('')
-  const [coSupervisor, setCoSupervisor] = useState('')
   const [loading, setLoading] = useState(true)
+  const [selectedStudent, setSelectedStudent] = useState(null)
+  const [selectedSupervisor, setSelectedSupervisor] = useState('')
   const [saving, setSaving] = useState(false)
-
-  const fetchData = async () => {
-    try {
-      const studentsRes = await fetch(
-        'http://localhost:5000/api/auth/students?departmentId=' + user.department_id
-      )
-      setStudents(await studentsRes.json())
-
-      const supervisorsRes = await fetch(
-        'http://localhost:5000/api/auth/supervisors?departmentId=' + user.department_id
-      )
-      setSupervisors(await supervisorsRes.json())
-    } catch (err) {
-      console.error('Error fetching data:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [assigned, setAssigned] = useState(false)
 
   useEffect(() => {
-    fetchData()
-  }, [user.department_id])
+    const fetchData = async () => {
+      try {
+        const studentsRes = await fetch('http://localhost:5000/api/auth/students')
+        const studentsData = await studentsRes.json()
+        setStudents(studentsData)
 
-  const handleSelectStudent = (student) => {
-    setSelectedStudent(student)
-    // Pre-fill with current assignment if any
-    setSupervisor(student.supervisor_id ? String(student.supervisor_id) : '')
-    setCoSupervisor(student.co_supervisor_id ? String(student.co_supervisor_id) : '')
-  }
+        const supervisorsRes = await fetch('http://localhost:5000/api/auth/supervisors')
+        const supervisorsData = await supervisorsRes.json()
+        setSupervisors(supervisorsData)
+      } catch (err) {
+        console.error('Error fetching data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const handleAssign = async () => {
 
-    if (!supervisor) {
-      alert('Please select a main supervisor.')
+    if (!selectedSupervisor) {
+      alert('Please select a supervisor.')
       return
-    }
-
-    if (coSupervisor && coSupervisor === supervisor) {
-      alert('Co-supervisor must be different from the main supervisor.')
-      return
-    }
-
-    // If changing an existing supervisor, confirm first
-    const hasExisting = selectedStudent.supervisor_id
-    const isChanging = hasExisting && String(selectedStudent.supervisor_id) !== supervisor
-
-    if (isChanging) {
-      const confirmed = window.confirm(
-        'This student already has a supervisor (' + selectedStudent.supervisor_name + ').\n\n' +
-        'Changing it will notify the current supervisor, the new supervisor, and the student.\n\nProceed?'
-      )
-      if (!confirmed) return
     }
 
     setSaving(true)
+
     try {
-      const response = await fetch('http://localhost:5000/api/auth/assign-supervisors', {
+      const response = await fetch('http://localhost:5000/api/auth/assign-supervisor', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: selectedStudent.id,
-          supervisorId: supervisor,
-          coSupervisorId: coSupervisor || null
+          supervisorId: Number(selectedSupervisor)
         })
       })
 
       const data = await response.json()
+
       if (!response.ok) {
         alert(data.message)
         return
       }
 
-      alert(data.message)
-      setSelectedStudent(null)
-      setSupervisor('')
-      setCoSupervisor('')
-      fetchData()
+      setAssigned(true)
+
+      // Refresh students to show updated supervisor
+      const studentsRes = await fetch('http://localhost:5000/api/auth/students')
+      const studentsData = await studentsRes.json()
+      setStudents(studentsData)
 
     } catch (err) {
       alert('Could not connect to server.')
@@ -102,99 +74,121 @@ function AssignSupervisor() {
       setSaving(false)
     }
   }
+const handleRemove = async (studentId, studentName) => {
 
-  const handleRemove = async () => {
-    const confirmed = window.confirm(
-      'Remove the supervisor (and co-supervisor) from ' + selectedStudent.name + '?\n\n' +
-      'The student will have no supervisor until you assign a new one. ' +
-      'The removed supervisor(s) and the student will be notified.'
-    )
-    if (!confirmed) return
+  if (!window.confirm(`Remove supervisor from ${studentName}?`)) return
 
-    setSaving(true)
-    try {
-      const response = await fetch(
-        'http://localhost:5000/api/auth/remove-supervisor/' + selectedStudent.id,
-        { method: 'PUT' }
-      )
-      const data = await response.json()
-      if (!response.ok) { alert(data.message); return }
+  setSaving(true)
 
+  try {
+    const response = await fetch('http://localhost:5000/api/auth/assign-supervisor', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentId: studentId,
+        supervisorId: null
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
       alert(data.message)
-      setSelectedStudent(null)
-      setSupervisor('')
-      setCoSupervisor('')
-      fetchData()
-    } catch (err) {
-      alert('Could not connect to server.')
-      console.error(err)
-    } finally {
-      setSaving(false)
+      return
     }
+
+    alert(`Supervisor removed from ${studentName}`)
+
+    // Refresh students
+    const studentsRes = await fetch('http://localhost:5000/api/auth/students')
+    const studentsData = await studentsRes.json()
+    setStudents(studentsData)
+    setSelectedStudent(null)
+
+  } catch (err) {
+    alert('Could not connect to server.')
+    console.error(err)
+  } finally {
+    setSaving(false)
   }
+}
+  
+
   return (
     <div>
       <Navbar />
 
-      <div style={{ padding: '30px', maxWidth: '1280px', margin: '0 auto' }}>
+      <div style={{ padding: '30px', maxWidth: '1100px', margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{
-          backgroundColor: '#002147', color: 'white',
-          padding: '25px 30px', borderRadius: '8px', marginBottom: '30px'
+          backgroundColor: '#002147',
+          color: 'white',
+          padding: '25px 30px',
+          borderRadius: '8px',
+          marginBottom: '30px'
         }}>
-          <h1 style={{ margin: 0, fontSize: '22px' }}>Assign Supervisors</h1>
-          <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '14px' }}>
-            Assign a supervisor and co-supervisor to students in your department
+          <h1 style={{ margin: 0, fontSize: '20px' }}>Assign Supervisor</h1>
+          <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
+            Assign supervisors to postgraduate students
           </p>
         </div>
 
         {/* Back button */}
         <button
-          onClick={() => navigate('/coordinator')}
+          onClick={() => navigate('/hod')}
           style={{
-            backgroundColor: 'transparent', border: '1px solid #002147',
-            color: '#002147', padding: '8px 16px', borderRadius: '4px',
-            marginBottom: '25px', fontSize: '13px', cursor: 'pointer'
+            backgroundColor: 'transparent',
+            border: '1px solid #002147',
+            color: '#002147',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            marginBottom: '25px',
+            fontSize: '13px',
+            cursor: 'pointer'
           }}>
           ← Back to Dashboard
         </button>
 
-        {loading && <LoadingSpinner message="Loading students..." />}
+        {loading && <LoadingSpinner message="Loading students and supervisors..." />}
 
-        {/* No students */}
-        {!loading && students.length === 0 && (
-          <div style={{
-            backgroundColor: '#fff3e0', border: '1px solid #ff9800',
-            padding: '25px', borderRadius: '8px',
-            textAlign: 'center', color: '#e65100'
-          }}>
-            ⏳ No students in your department yet.
-          </div>
-        )}
-
-        {/* Student list */}
-        {!loading && students.length > 0 && (
+        {!loading && (
           <div>
+
+            {/* Students list */}
             <h2 style={{
-              color: '#002147', marginBottom: '20px', fontSize: '18px',
-              borderLeft: '4px solid #8B0000', paddingLeft: '10px'
+              color: '#002147',
+              marginBottom: '20px',
+              fontSize: '18px',
+              borderLeft: '4px solid #8B0000',
+              paddingLeft: '10px'
             }}>
               Select a Student
             </h2>
 
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '30px' }}>
+            <div style={{
+              display: 'flex',
+              gap: '15px',
+              flexWrap: 'wrap',
+              marginBottom: '30px'
+            }}>
               {students.map(student => (
                 <div
                   key={student.id}
-                  onClick={() => handleSelectStudent(student)}
+                  onClick={() => {
+                    setSelectedStudent(student)
+                    setSelectedSupervisor('')
+                    setAssigned(false)
+                  }}
                   style={{
-                    backgroundColor: selectedStudent && selectedStudent.id === student.id ? '#002147' : 'white',
-                    color: selectedStudent && selectedStudent.id === student.id ? 'white' : '#333333',
+                    backgroundColor: selectedStudent?.id === student.id ? '#002147' : 'white',
+                    color: selectedStudent?.id === student.id ? 'white' : '#333',
                     border: '1px solid #dddddd',
-                    borderTop: '4px solid ' + (student.degree === 'PhD' ? '#8B0000' : '#002147'),
-                    padding: '20px', borderRadius: '8px',
-                    cursor: 'pointer', width: '240px',
+                    borderTop: `4px solid ${student.degree === 'PhD' ? '#8B0000' : '#002147'}`,
+                    padding: '20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    width: '220px',
                     boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
                   }}>
                   <h3 style={{ marginBottom: '8px', fontSize: '15px' }}>
@@ -202,26 +196,41 @@ function AssignSupervisor() {
                   </h3>
                   <span style={{
                     backgroundColor: student.degree === 'PhD' ? '#8B0000' : '#002147',
-                    color: 'white', padding: '3px 10px',
-                    borderRadius: '12px', fontSize: '11px'
+                    color: 'white',
+                    padding: '3px 10px',
+                    borderRadius: '12px',
+                    fontSize: '11px'
                   }}>
                     {student.degree}
                   </span>
-
-                  {/* Current assignment status */}
-                  <div style={{ marginTop: '10px', fontSize: '12px' }}>
-                    <p style={{
-                      color: selectedStudent && selectedStudent.id === student.id ? '#ddd' : '#666',
-                      marginBottom: '2px'
-                    }}>
-                      Supervisor: {student.supervisor_name || 'Not assigned'}
-                    </p>
-                    <p style={{
-                      color: selectedStudent && selectedStudent.id === student.id ? '#ddd' : '#666'
-                    }}>
-                      Co-Supervisor: {student.co_supervisor_name || 'None'}
-                    </p>
-                  </div>
+                {student.supervisor_id && (
+  <div>
+    <p style={{
+      fontSize: '11px',
+      marginTop: '8px',
+      color: selectedStudent?.id === student.id ? '#aaaaaa' : '#2e7d32'
+    }}>
+      ✅ Supervisor assigned
+    </p>
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        handleRemove(student.id, student.name)
+      }}
+      style={{
+        backgroundColor: '#c62828',
+        color: 'white',
+        border: 'none',
+        padding: '3px 8px',
+        borderRadius: '4px',
+        fontSize: '11px',
+        cursor: 'pointer',
+        marginTop: '5px'
+      }}>
+      ✕ Remove
+    </button>
+  </div>
+)}
                 </div>
               ))}
             </div>
@@ -229,114 +238,91 @@ function AssignSupervisor() {
             {/* Assignment form */}
             {selectedStudent && (
               <div style={{
-                backgroundColor: 'white', padding: '25px',
-                borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+                backgroundColor: 'white',
+                padding: '25px',
+                borderRadius: '8px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
               }}>
-                <h2 style={{
-                  color: '#002147', marginBottom: '5px', fontSize: '18px',
-                  borderLeft: '4px solid #8B0000', paddingLeft: '10px'
-                }}>
-                  Assign Supervisors for {selectedStudent.name}
-                </h2>
 
-                <div style={{
-                  backgroundColor: '#f0f7ff', border: '1px solid #002147',
-                  padding: '12px 15px', borderRadius: '6px',
-                  margin: '15px 0', fontSize: '13px', color: '#002147'
+                <h3 style={{
+                  color: '#002147',
+                  borderBottom: '2px solid #f0f0f0',
+                  paddingBottom: '10px',
+                  marginBottom: '20px'
                 }}>
-                  ℹ️ The co-supervisor is optional and supports the main supervisor.
-                  Both must be from the same department.
-                </div>
+                  Assign Supervisor for {selectedStudent.name}
+                </h3>
 
-                {/* Main supervisor */}
+                {/* Supervisor dropdown */}
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{
-                    display: 'block', fontWeight: 'bold',
-                    color: '#002147', marginBottom: '6px'
+                    display: 'block',
+                    fontWeight: 'bold',
+                    color: '#002147',
+                    marginBottom: '6px'
                   }}>
-                    Main Supervisor: *
+                    Select Supervisor: *
                   </label>
                   <select
-                    value={supervisor}
-                    onChange={(e) => setSupervisor(e.target.value)}
+                    value={selectedSupervisor}
+                    onChange={(e) => {
+                      setSelectedSupervisor(e.target.value)
+                      setAssigned(false)
+                    }}
                     style={{
-                      width: '100%', padding: '10px',
-                      border: '1px solid #cccccc', borderRadius: '4px',
-                      fontSize: '14px', backgroundColor: 'white'
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #cccccc',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      backgroundColor: 'white'
                     }}>
-                    <option value="">-- Select Main Supervisor --</option>
-                    {supervisors.map(sup => (
-                      <option key={sup.id} value={String(sup.id)}>
-                        {sup.name}
+                    <option value="">-- Select Supervisor --</option>
+                    {supervisors.map(supervisor => (
+                      <option key={supervisor.id} value={supervisor.id}>
+                        {supervisor.name}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Co-supervisor */}
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{
-                    display: 'block', fontWeight: 'bold',
-                    color: '#002147', marginBottom: '6px'
+                {/* Success message */}
+                {assigned && (
+                  <div style={{
+                    backgroundColor: '#e6f4ea',
+                    border: '1px solid #4caf50',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    marginBottom: '15px',
+                    color: '#2e7d32',
+                    fontSize: '14px'
                   }}>
-                    Co-Supervisor (optional):
-                  </label>
-                  <select
-                    value={coSupervisor}
-                    onChange={(e) => setCoSupervisor(e.target.value)}
-                    style={{
-                      width: '100%', padding: '10px',
-                      border: '1px solid #cccccc', borderRadius: '4px',
-                      fontSize: '14px', backgroundColor: 'white'
-                    }}>
-                    <option value="">-- No Co-Supervisor --</option>
-                    {supervisors
-                      .filter(sup => String(sup.id) !== supervisor)
-                      .map(sup => (
-                        <option key={sup.id} value={String(sup.id)}>
-                          {sup.name}
-                        </option>
-                      ))
-                    }
-                  </select>
-                </div>
+                    ✅ Supervisor successfully assigned to {selectedStudent.name}!
+                    The supervisor has been notified.
+                  </div>
+                )}
 
-                {/* Save button */}
+                {/* Assign button */}
                 <button
                   onClick={handleAssign}
                   disabled={saving}
                   style={{
-                    width: '100%', padding: '12px',
+                    width: '100%',
+                    padding: '12px',
                     backgroundColor: saving ? '#cccccc' : '#002147',
-                    color: 'white', border: 'none', borderRadius: '4px',
-                    fontSize: '15px', fontWeight: 'bold',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '15px',
+                    fontWeight: 'bold',
                     cursor: saving ? 'not-allowed' : 'pointer'
                   }}>
-             {saving
-                    ? 'Saving...'
-                    : selectedStudent.supervisor_id
-                    ? 'Update Supervisor Assignment'
-                    : 'Confirm Supervisor Assignment'}
+                  {saving ? 'Assigning...' : 'Confirm Supervisor Assignment'}
                 </button>
-
-                {selectedStudent.supervisor_id && (
-                  <button
-                    onClick={handleRemove}
-                    disabled={saving}
-                    style={{
-                      width: '100%', padding: '12px',
-                      backgroundColor: 'transparent', color: '#8B0000',
-                      border: '1px solid #8B0000', borderRadius: '4px',
-                      fontSize: '14px', fontWeight: 'bold',
-                      cursor: saving ? 'not-allowed' : 'pointer',
-                      marginTop: '12px'
-                    }}>
-                    Remove Supervisor
-                  </button>
-                )}
 
               </div>
             )}
+
           </div>
         )}
 

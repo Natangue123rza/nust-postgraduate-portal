@@ -197,7 +197,7 @@ setThesisVersions(await thesisVersionsRes.json())
         }}>
           <h1 style={{ margin: 0, fontSize: '20px' }}>Review Student Submissions</h1>
           <p style={{ margin: '5px 0 0 0', color: '#aaaaaa', fontSize: '13px' }}>
-            Review and approve proposals and theses before they go to HOD
+            Review and approve proposals and theses before they go to Coordinator
           </p>
         </div>
 
@@ -427,7 +427,7 @@ setThesisVersions(await thesisVersionsRes.json())
                                 checked={proposalStatus === 'approved'}
                                 onChange={(e) => setProposalStatus(e.target.value)}
                               />
-                              ✅ Approve — Forward to HOD
+                              ✅ Approve — Forward to Coordinator
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                               <input
@@ -476,7 +476,7 @@ setThesisVersions(await thesisVersionsRes.json())
                           color: proposal.supervisor_status === 'approved' ? '#2e7d32' : '#c62828'
                         }}>
                           {proposal.supervisor_status === 'approved'
-                            ? '✅ You approved this proposal — forwarded to HOD'
+                            ? '✅ You approved this proposal — forwarded to Coordinator'
                             : '❌ You requested revisions — awaiting student resubmission'}
                         </div>
                       )}

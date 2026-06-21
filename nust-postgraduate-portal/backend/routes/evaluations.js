@@ -99,15 +99,7 @@ router.post('/submit', async (req, res) => {
       ]
     )
 
-    // Notify the student
-await poolPromise.query(
-  'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
-  [
-    studentId,
-    'Thesis Evaluated',
-    `Your thesis has been evaluated by an examiner. Log in to view your results and final mark.`
-  ]
-)
+// (The student is notified only when the result is released, not on each examiner submission.)
 
     // Check if we can calculate final mark
     // Get student degree
@@ -305,10 +297,28 @@ router.delete('/delete/:studentId', async (req, res) => {
 router.put('/submit-to-hdc/:studentId', async (req, res) => {
   const { studentId } = req.params
   try {
-    await poolPromise.query(
+await poolPromise.query(
       'UPDATE evaluations SET submitted_to_hdc = 1 WHERE student_id = ? AND is_voided = 0',
       [studentId]
     )
+    // Notify the faculty representative(s) that marks await HDC approval
+    const [frows] = await poolPromise.query(
+      'SELECT name, faculty_id FROM users WHERE id = ?',
+      [studentId]
+    )
+    const fstudent = frows[0]
+    if (fstudent && fstudent.faculty_id) {
+      const [reps] = await poolPromise.query(
+        "SELECT id FROM users WHERE role = 'faculty_rep' AND faculty_id = ?",
+        [fstudent.faculty_id]
+      )
+      for (const r of reps) {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [r.id, 'Marks Awaiting HDC Approval', 'The coordinator has submitted the examination marks for ' + fstudent.name + ' for HDC approval.']
+        )
+      }
+    }
     res.json({ message: 'Marks submitted for HDC approval.' })
   } catch (err) {
     console.error('Submit to HDC error:', err)
@@ -326,8 +336,8 @@ router.put('/hdc-approve/:studentId', async (req, res) => {
       'UPDATE evaluations SET hdc_approved = 1 WHERE student_id = ? AND is_voided = 0',
       [studentId]
     )
-    const [rows] = await poolPromise.query(
-      'SELECT name, supervisor_id FROM users WHERE id = ?',
+const [rows] = await poolPromise.query(
+      'SELECT name, supervisor_id, department_id FROM users WHERE id = ?',
       [studentId]
     )
     const student = rows[0]
@@ -338,9 +348,37 @@ router.put('/hdc-approve/:studentId', async (req, res) => {
          'The final mark for ' + student.name + ' has been approved by the HDC. You can now release it to the student.']
       )
     }
+    if (student && student.department_id) {
+      const [coords] = await poolPromise.query(
+        "SELECT id FROM users WHERE role = 'coordinator' AND department_id = ?",
+        [student.department_id]
+      )
+      for (const c of coords) {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [c.id, 'Result Approved by HDC',
+           'The HDC has approved the final mark for ' + student.name + '. The supervisor will now release it to the student.']
+        )
+      }
+    }
     res.json({ message: 'Marks approved by HDC.' })
   } catch (err) {
     console.error('HDC approve error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/evaluations/student-released/:studentId  (is the student's result released?)
+router.get('/student-released/:studentId', async (req, res) => {
+  const { studentId } = req.params
+  try {
+    const [rows] = await poolPromise.query(
+      'SELECT id FROM evaluations WHERE student_id = ? AND is_released = 1 AND is_voided = 0',
+      [studentId]
+    )
+    res.json(rows)
+  } catch (err) {
+    console.error('Student released error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

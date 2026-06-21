@@ -104,8 +104,10 @@ function SupervisorDashboard() {
               </p>
             </div>
 
-            {/* Pending reviews */}
-            <div style={{
+        {/* Pending reviews */}
+            <div
+              onClick={() => { if (pendingReviews > 0) navigate('/supervisor/review') }}
+              style={{
               backgroundColor: pendingReviews > 0 ? '#fff3e0' : 'white',
               padding: '20px 25px',
               borderRadius: '8px',
@@ -113,6 +115,7 @@ function SupervisorDashboard() {
               flex: 1,
               minWidth: '150px',
               textAlign: 'center',
+              cursor: pendingReviews > 0 ? 'pointer' : 'default',
               border: pendingReviews > 0 ? '1px solid #ff9800' : '1px solid #dddddd'
             }}>
               <p style={{
@@ -191,107 +194,9 @@ function SupervisorDashboard() {
           </div>
         )}
 
-        {/* Action cards */}
-        <h2 style={{
-          color: '#002147', marginBottom: '20px',
-          fontSize: '18px', borderLeft: '4px solid #8B0000',
-          paddingLeft: '10px'
-        }}>
-          Supervisor Actions
-        </h2>
+     
 
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-
-          {/* Review Submissions */}
-          <div
-            onClick={() => navigate('/supervisor/review')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: `4px solid ${pendingReviews > 0 ? '#ff9800' : '#002147'}`,
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)',
-              position: 'relative'
-            }}>
-            {pendingReviews > 0 && (
-              <span style={{
-                position: 'absolute', top: '-8px', right: '-8px',
-                backgroundColor: '#ff9800', color: 'white',
-                borderRadius: '50%', width: '22px', height: '22px',
-                fontSize: '12px', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                fontWeight: 'bold'
-              }}>
-                {pendingReviews}
-              </span>
-            )}
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              🔍 Review Submissions
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Review and approve student proposals and theses
-            </p>
-          </div>
-
-          {/* Progress Reports */}
-          <div
-            onClick={() => navigate('/supervisor/progress-reports')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              📋 Progress Reports
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Review progress reports and add supervisor comments
-            </p>
-          </div>
-
-          {/* Grade Thesis */}
-          <div
-            onClick={() => navigate('/supervisor/grade')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #8B0000',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#8B0000', marginBottom: '10px' }}>
-              📝 Grade Thesis
-            </h3>
-          <p style={{ fontSize: '13px', color: '#666666' }}>
-              Submit your evaluation as internal examiner
-            </p>
-          </div>
-
-          {/* My Students */}
-          <div
-            onClick={() => navigate('/supervisor/students')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px', borderRadius: '8px',
-              cursor: 'pointer', width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              👥 My Students
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              View all your students and track their research progress
-            </p>
-          </div>
-
-        </div>
+        
       </div>
     </div>
   )

@@ -11,11 +11,22 @@ router.post('/schedule', async (req, res) => {
       'INSERT INTO presentations (student_id, title, defence_date, defence_time, venue) VALUES (?, ?, ?, ?, ?)',
       [studentId, title || null, defenceDate || null, defenceTime || null, venue || null]
     )
-    await poolPromise.query(
+await poolPromise.query(
       'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
       [studentId, 'Defence Scheduled',
        'Your thesis defence has been scheduled. Check the portal home page for the date, time and venue.']
     )
+
+    // Notify everyone following postgraduate news/events
+    const [subs] = await poolPromise.query('SELECT id FROM users WHERE is_pg_subscriber = 1')
+    for (const s of subs) {
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [s.id, 'Upcoming Postgraduate Defence',
+         'A new postgraduate defence has been scheduled. See the portal home page for details.']
+      )
+    }
+
     res.json({ message: 'Defence scheduled successfully!' })
   } catch (err) {
     console.error('Schedule defence error:', err)
@@ -60,5 +71,24 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 })
+
+// GET /api/presentations/student/:studentId  (a student's own upcoming defence)
+router.get('/student/:studentId', async (req, res) => {
+  const { studentId } = req.params
+  try {
+    const [rows] = await poolPromise.query(
+      "SELECT id, title, defence_date, defence_time, venue FROM presentations " +
+      "WHERE student_id = ? AND defence_date >= CURDATE() " +
+      "ORDER BY defence_date ASC, defence_time ASC",
+      [studentId]
+    )
+    res.json(rows)
+  } catch (err) {
+    console.error('Student defence error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+
 
 module.exports = router

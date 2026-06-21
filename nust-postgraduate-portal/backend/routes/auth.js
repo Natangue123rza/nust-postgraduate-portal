@@ -527,5 +527,30 @@ router.put('/assign-faculty-rep', async (req, res) => {
   }
 })
 
+// GET /api/auth/subscription/:userId  (is this user following PG news?)
+router.get('/subscription/:userId', async (req, res) => {
+  const { userId } = req.params
+  try {
+    const [rows] = await poolPromise.query('SELECT is_pg_subscriber FROM users WHERE id = ?', [userId])
+    res.json({ subscribed: rows.length ? !!rows[0].is_pg_subscriber : false })
+  } catch (err) {
+    console.error('Subscription get error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/auth/subscription/:userId  (follow / unfollow)
+router.put('/subscription/:userId', async (req, res) => {
+  const { userId } = req.params
+  const { subscribed } = req.body
+  try {
+    await poolPromise.query('UPDATE users SET is_pg_subscriber = ? WHERE id = ?', [subscribed ? 1 : 0, userId])
+    res.json({ message: subscribed ? 'You are now following postgraduate news.' : 'You have unsubscribed.' })
+  } catch (err) {
+    console.error('Subscription set error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 
 module.exports = router

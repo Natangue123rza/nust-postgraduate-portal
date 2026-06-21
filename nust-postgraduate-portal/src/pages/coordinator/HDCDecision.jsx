@@ -1,4 +1,4 @@
-// src/pages/hod/HDCDecision.jsx
+// src/pages/coordinator/HDCDecision.jsx
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'

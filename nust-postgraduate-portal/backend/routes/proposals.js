@@ -455,19 +455,46 @@ router.put('/faculty-approve/:proposalId', async (req, res) => {
       [facultyStatus, approverId, comments || null, proposalId]
     )
 
-    const [rows] = await poolPromise.query('SELECT student_id FROM proposals WHERE id = ?', [proposalId])
-    const studentId = rows.length > 0 ? rows[0].student_id : null
-    if (studentId) {
+    if (decision === 'approved') {
+      await poolPromise.query("UPDATE proposals SET status = 'Approved' WHERE id = ?", [proposalId])
+    } else {
+      // Revisions: send it back so the student can revise and resubmit; surface the committee comments
+      await poolPromise.query(
+        "UPDATE proposals SET status = 'Revision Required', hdc_comments = ? WHERE id = ?",
+        [comments || null, proposalId]
+      )
+    }
+
+    const [rows] = await poolPromise.query(
+      'SELECT p.student_id, u.name as student_name, u.supervisor_id FROM proposals p JOIN users u ON p.student_id = u.id WHERE p.id = ?',
+      [proposalId]
+    )
+    if (rows.length > 0) {
+      const studentId = rows[0].student_id
+      const supervisorId = rows[0].supervisor_id
+      const studentName = rows[0].student_name
+
       await poolPromise.query(
         'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
         [
           studentId,
-          decision === 'approved' ? 'Proposal Approved by HDC' : 'HDC Feedback on Your Proposal',
+          decision === 'approved' ? 'Proposal Approved by HDC' : 'HDC Requested Revisions',
           decision === 'approved'
             ? 'Your proposal has been approved by the Higher Degrees Committee.'
-            : 'The Higher Degrees Committee has reviewed your proposal and requested revisions. Please check the feedback with your supervisor.'
+            : 'The Higher Degrees Committee has requested revisions to your proposal. Open your proposal to read the feedback, then revise and resubmit a new version.'
         ]
       )
+
+      if (decision !== 'approved' && supervisorId) {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [
+            supervisorId,
+            'HDC Requested Revisions',
+            'The HDC requested revisions on ' + studentName + "'s proposal. Please guide the revision; the student will resubmit a new version."
+          ]
+        )
+      }
     }
 
     res.json({ message: 'HDC outcome recorded.' })
@@ -531,6 +558,182 @@ router.get('/reviews-all', async (req, res) => {
     res.json(rows)
   } catch (err) {
     console.error('Reviews-all error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/proposals/my-reviews/:evaluatorId
+// Proposals assigned to this evaluator for review
+router.get('/my-reviews/:evaluatorId', async (req, res) => {
+  const { evaluatorId } = req.params
+  try {
+    const [rows] = await poolPromise.query(
+      "SELECT pr.id as review_id, pr.proposal_id, pr.feedback, pr.status, " +
+      "p.title, p.description, p.file_name, p.student_id, " +
+      "u.name as student_name, u.degree as degree " +
+      "FROM proposal_reviews pr " +
+      "JOIN proposals p ON pr.proposal_id = p.id " +
+      "JOIN users u ON p.student_id = u.id " +
+      "WHERE pr.evaluator_id = ? " +
+      "ORDER BY pr.created_at DESC",
+      [evaluatorId]
+    )
+    res.json(rows)
+  } catch (err) {
+    console.error('My-reviews error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/proposals/submit-review/:reviewId
+// Evaluator submits feedback or approves (no marks at proposal stage)
+router.put('/submit-review/:reviewId', async (req, res) => {
+  const { reviewId } = req.params
+  const { feedback, status } = req.body
+  try {
+    await poolPromise.query(
+      'UPDATE proposal_reviews SET feedback = ?, status = ?, updated_at = NOW() WHERE id = ?',
+      [feedback, status, reviewId]
+    )
+    const [rows] = await poolPromise.query(
+      "SELECT p.title, u.supervisor_id, u.name as student_name " +
+      "FROM proposal_reviews pr " +
+      "JOIN proposals p ON pr.proposal_id = p.id " +
+      "JOIN users u ON p.student_id = u.id " +
+      "WHERE pr.id = ?",
+      [reviewId]
+    )
+    if (rows.length > 0 && rows[0].supervisor_id) {
+      const verb = status === 'Approved' ? 'approved' : 'gave feedback on'
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [rows[0].supervisor_id, 'Proposal Evaluator Update',
+         'An evaluator ' + verb + ' the proposal "' + rows[0].title + '" by ' + rows[0].student_name + '.']
+      )
+    }
+    res.json({ message: status === 'Approved' ? 'Proposal approved!' : 'Feedback submitted!' })
+  } catch (err) {
+    console.error('Submit review error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/proposals/submit-to-faculty/:proposalId
+// Coordinator forwards a proposal to the Faculty Rep once it has >= 2 evaluator approvals
+router.put('/submit-to-faculty/:proposalId', async (req, res) => {
+  const { proposalId } = req.params
+  try {
+    const [approvals] = await poolPromise.query(
+      "SELECT COUNT(*) as count FROM proposal_reviews WHERE proposal_id = ? AND status = 'Approved'",
+      [proposalId]
+    )
+    if (approvals[0].count < 2) {
+      return res.status(400).json({ message: 'This proposal needs at least 2 evaluator approvals before it can be submitted.' })
+    }
+    await poolPromise.query(
+      "UPDATE proposals SET hdc_decision = 'approved', status = 'Submitted to Faculty' WHERE id = ?",
+      [proposalId]
+    )
+    const [rows] = await poolPromise.query(
+      "SELECT p.title, u.faculty_id, u.name as student_name " +
+      "FROM proposals p JOIN users u ON p.student_id = u.id WHERE p.id = ?",
+      [proposalId]
+    )
+    if (rows.length > 0 && rows[0].faculty_id) {
+      const [reps] = await poolPromise.query(
+        "SELECT id FROM users WHERE role = 'faculty_rep' AND faculty_id = ?",
+        [rows[0].faculty_id]
+      )
+      for (const rep of reps) {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [rep.id, 'Proposal Submitted for HDC',
+           'The proposal "' + rows[0].title + '" by ' + rows[0].student_name + ' has been submitted for the HDC meeting.']
+        )
+      }
+    }
+    res.json({ message: 'Proposal submitted to the Faculty Representative.' })
+  } catch (err) {
+    console.error('Submit to faculty error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// GET /api/proposals/supervisor-feedback/:supervisorId
+// Evaluator feedback on proposals of this supervisor's (or co-supervisor's) students — read-only
+router.get('/supervisor-feedback/:supervisorId', async (req, res) => {
+  const { supervisorId } = req.params
+  try {
+    const [rows] = await poolPromise.query(
+      "SELECT pr.id as review_id, pr.proposal_id, pr.feedback, pr.status, " +
+      "ev.name as evaluator_name, " +
+      "p.title as proposal_title, u.name as student_name, u.degree as degree " +
+      "FROM proposal_reviews pr " +
+      "JOIN proposals p ON pr.proposal_id = p.id " +
+      "JOIN users u ON p.student_id = u.id " +
+      "LEFT JOIN users ev ON pr.evaluator_id = ev.id " +
+      "WHERE (u.supervisor_id = ? OR u.co_supervisor_id = ?) " +
+      "ORDER BY p.id DESC, pr.id ASC",
+      [supervisorId, supervisorId]
+    )
+    res.json(rows)
+  } catch (err) {
+    console.error('Supervisor feedback error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// PUT /api/proposals/ethics-form/:id  (student submits the in-system ethics application)
+router.put('/ethics-form/:id', async (req, res) => {
+  const { id } = req.params
+  const { involvesHumans, dataMethods, risks, consentProcess, dataProtection, consentFileName } = req.body
+  try {
+    await poolPromise.query(
+      "UPDATE proposals SET ethics_involves_humans = ?, ethics_data_methods = ?, ethics_risks = ?, " +
+      "ethics_consent_process = ?, ethics_data_protection = ?, ethics_file = ?, ethics_status = 'Submitted' WHERE id = ?",
+      [involvesHumans || null, dataMethods || null, risks || null, consentProcess || null, dataProtection || null, consentFileName || null, id]
+    )
+    res.json({ message: 'Ethics application submitted.' })
+  } catch (err) {
+    console.error('Ethics form error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+
+
+// PUT /api/proposals/return-for-revision/:proposalId
+// Coordinator sends a proposal back to the student when evaluators want changes (no 2 approvals)
+router.put('/return-for-revision/:proposalId', async (req, res) => {
+  const { proposalId } = req.params
+  try {
+    await poolPromise.query(
+      "UPDATE proposals SET status = 'Revision Required' WHERE id = ?",
+      [proposalId]
+    )
+    const [rows] = await poolPromise.query(
+      "SELECT p.title, u.id as student_id, u.name as student_name, u.supervisor_id " +
+      "FROM proposals p JOIN users u ON p.student_id = u.id WHERE p.id = ?",
+      [proposalId]
+    )
+    if (rows.length > 0) {
+      const r = rows[0]
+      await poolPromise.query(
+        'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+        [r.student_id, 'Proposal — Revisions Requested',
+         'The evaluators have requested revisions to your proposal. Please revise it with your supervisor and resubmit a new version.']
+      )
+      if (r.supervisor_id) {
+        await poolPromise.query(
+          'INSERT INTO notifications (user_id, title, message) VALUES (?, ?, ?)',
+          [r.supervisor_id, 'Proposal Returned for Revision',
+           'The evaluators requested revisions on ' + r.student_name + "'s proposal. Please guide the revision; the student will resubmit a new version."]
+        )
+      }
+    }
+    res.json({ message: 'Proposal returned to the student for revision.' })
+  } catch (err) {
+    console.error('Return for revision error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })

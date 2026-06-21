@@ -13,7 +13,8 @@ function Results() {
   const [proposal, setProposal] = useState(null)
   const [thesis, setThesis] = useState(null)
   const [reports, setReports] = useState([])
-  const [evaluations, setEvaluations] = useState([])
+const [evaluations, setEvaluations] = useState([])
+  const [released, setReleased] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,12 +38,19 @@ function Results() {
         const reportsData = await reportsRes.json()
         setReports(reportsData)
 
-        // Only released, non-voided evaluations come back
+// Only released, non-voided evaluations come back
         const evalRes = await fetch(
           'http://localhost:5000/api/evaluations/student/' + user.id
         )
         const evalData = await evalRes.json()
-        setEvaluations(evalData)
+        setEvaluations(Array.isArray(evalData) ? evalData : [])
+
+        // Whether the result has actually been released — same signal the dashboard uses
+        const relRes = await fetch(
+          'http://localhost:5000/api/evaluations/student-released/' + user.id
+        )
+        const relData = await relRes.json()
+        setReleased(Array.isArray(relData) && relData.length > 0)
       } catch (err) {
         console.error('Error fetching results:', err)
       } finally {
@@ -54,29 +62,27 @@ function Results() {
 
  // Final mark = average of all released marks (same rule as the HOD's Manage Results)
   // Masters needs 2 marks (supervisor + 1 external), PhD needs 3 (supervisor + 2 external)
-  const getFinalMark = () => {
+const getFinalMark = () => {
     if (evaluations.length === 0) return null
 
+    // Average the largest group of marks within 20 of each other — exactly the
+    // coordinator's calculation. Any outlier is excluded.
     const marks = evaluations.map(function (e) { return e.total_mark })
-    const expected = user.degree === 'PhD' ? 3 : 2
-
-    // Wait until every mark is in
-    if (marks.length < expected) {
-      return { finalMark: null, discrepancy: false }
+    const sorted = marks.slice().sort(function (a, b) { return a - b })
+    let bestStart = 0
+    let bestLen = 1
+    for (let i = 0; i < sorted.length; i++) {
+      let j = i
+      while (j < sorted.length && sorted[j] - sorted[i] <= 20) { j++ }
+      if (j - i > bestLen) { bestLen = j - i; bestStart = i }
     }
-
-    const highest = Math.max.apply(null, marks)
-    const lowest = Math.min.apply(null, marks)
-    if (highest - lowest > 20) {
-      return { finalMark: null, discrepancy: true }
-    }
-
-    const sum = marks.reduce(function (a, b) { return a + b }, 0)
-    return { finalMark: Math.round(sum / marks.length), discrepancy: false }
+    const agreeing = sorted.slice(bestStart, bestStart + bestLen)
+    const sum = agreeing.reduce(function (a, b) { return a + b }, 0)
+    return { finalMark: Math.round(sum / agreeing.length), discrepancy: false }
   }
 
-  const finalMark = getFinalMark()
-  const resultsReleased = evaluations.length > 0
+const finalMark = getFinalMark()
+  const resultsReleased = released
 
   // Status badge helper
   const statusBadge = (status, fallback) => {

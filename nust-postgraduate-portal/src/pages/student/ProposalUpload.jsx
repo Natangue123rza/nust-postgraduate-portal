@@ -12,10 +12,12 @@ function ProposalUpload() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
-  const [submitted, setSubmitted] = useState(false)
-  const [deadlinePassed, setDeadlinePassed] = useState(false)
+const [submitted, setSubmitted] = useState(false)
   const [existingProposal, setExistingProposal] = useState(null)
-  const [isResubmitting, setIsResubmitting] = useState(false)
+const [isResubmitting, setIsResubmitting] = useState(false)
+  const [ethics, setEthics] = useState({ involvesHumans: '', dataMethods: '', risks: '', consentProcess: '', dataProtection: '' })
+  const [consentFile, setConsentFile] = useState(null)
+  const [ethicsSaving, setEthicsSaving] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,17 +27,8 @@ function ProposalUpload() {
           `http://localhost:5000/api/proposals/student/${user.id}`
         )
         const proposalData = await proposalRes.json()
-        if (proposalData.length > 0) {
+   if (proposalData.length > 0) {
           setExistingProposal(proposalData[0])
-        }
-
-        // Check deadline
-        const deadlineRes = await fetch('http://localhost:5000/api/deadlines/all')
-        const deadlineData = await deadlineRes.json()
-        if (deadlineData.proposal) {
-          const deadline = new Date(deadlineData.proposal)
-          const now = new Date()
-          setDeadlinePassed(now > deadline)
         }
       } catch (err) {
         console.error('Error fetching data:', err)
@@ -54,12 +47,7 @@ function ProposalUpload() {
     setFile(selectedFile)
   }
 
-  const handleSubmit = async () => {
-
-    if (deadlinePassed) {
-      alert('The submission deadline has passed.')
-      return
-    }
+const handleSubmit = async () => {
 
     if (!title) { alert('Please enter your research title.'); return }
     if (!description) { alert('Please enter a brief description.'); return }
@@ -115,9 +103,50 @@ function ProposalUpload() {
       if (!response.ok) { alert(data.message); return }
       setSubmitted(true)
 
+} catch (err) {
+      alert('Could not connect to server.')
+      console.error(err)
+    }
+  }
+
+  const handleEthicsSubmit = async () => {
+    if (!ethics.involvesHumans) { alert('Please indicate whether your research involves human participants.'); return }
+    if (!ethics.dataMethods.trim()) { alert('Please describe your data collection methods.'); return }
+    setEthicsSaving(true)
+    try {
+      let consentFileName = null
+      if (consentFile) {
+        const formData = new FormData()
+        formData.append('file', consentFile)
+        const uploadRes = await fetch('http://localhost:5000/api/uploads/file', { method: 'POST', body: formData })
+        const uploadData = await uploadRes.json()
+        if (!uploadRes.ok) { alert(uploadData.message); setEthicsSaving(false); return }
+        consentFileName = uploadData.fileName
+      }
+      const response = await fetch(
+        'http://localhost:5000/api/proposals/ethics-form/' + existingProposal.id,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            involvesHumans: ethics.involvesHumans,
+            dataMethods: ethics.dataMethods,
+            risks: ethics.risks,
+            consentProcess: ethics.consentProcess,
+            dataProtection: ethics.dataProtection,
+            consentFileName: consentFileName
+          })
+        }
+      )
+      const data = await response.json()
+      if (!response.ok) { alert(data.message); return }
+      alert(data.message)
+      window.location.reload()
     } catch (err) {
       alert('Could not connect to server.')
       console.error(err)
+    } finally {
+      setEthicsSaving(false)
     }
   }
 
@@ -207,10 +236,10 @@ function ProposalUpload() {
           </button>
         )}
 
-      {/* If approved — show ethics upload */}
+     {/* If approved — show in-system ethics application form */}
 {isApproved && (
   <div style={{ marginTop: '15px' }}>
- <div style={{
+    <div style={{
       backgroundColor: '#8B0000', color: 'white',
       padding: '14px 18px', borderRadius: '8px', marginBottom: '15px'
     }}>
@@ -218,92 +247,120 @@ function ProposalUpload() {
         ✅ Proposal approved — next required step
       </p>
       <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#ffdede' }}>
-        Please upload your signed ethics clearance form below to complete this stage.
+        Please complete your ethics clearance application below to complete this stage.
       </p>
     </div>
 
-    {/* Ethics status */}
- {(existingProposal.ethics_status === 'Submitted' || existingProposal.ethics_status === 'Verified') ? (
+    {(existingProposal.ethics_status === 'Submitted' || existingProposal.ethics_status === 'Verified') ? (
       <div style={{
         backgroundColor: existingProposal.ethics_status === 'Verified' ? '#e6f4ea' : '#e3f2fd',
         border: '1px solid ' + (existingProposal.ethics_status === 'Verified' ? '#4caf50' : '#2196f3'),
-        padding: '12px', borderRadius: '6px', fontSize: '13px',
+        padding: '16px', borderRadius: '6px', fontSize: '13px',
         color: existingProposal.ethics_status === 'Verified' ? '#2e7d32' : '#1565c0'
       }}>
-        {existingProposal.ethics_status === 'Verified'
-          ? '✅ Your ethics clearance has been confirmed and is on file. You may proceed with your research.'
-          : '⏳ Ethics clearance submitted — awaiting confirmation from the HOD.'}
+        <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>
+          {existingProposal.ethics_status === 'Verified'
+            ? '✅ Your ethics clearance has been confirmed and is on file. You may proceed with your research.'
+            : '⏳ Ethics application submitted — awaiting confirmation from the HOD.'}
+        </p>
+        <div style={{ backgroundColor: 'white', borderRadius: '6px', padding: '12px 14px', color: '#333' }}>
+          <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Involves human participants:</strong> {existingProposal.ethics_involves_humans || '—'}</p>
+          <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Data collection methods:</strong> {existingProposal.ethics_data_methods || '—'}</p>
+          <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Risks & mitigation:</strong> {existingProposal.ethics_risks || '—'}</p>
+          <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Informed consent:</strong> {existingProposal.ethics_consent_process || '—'}</p>
+          <p style={{ margin: '0 0 6px 0', fontSize: '12px' }}><strong>Data protection:</strong> {existingProposal.ethics_data_protection || '—'}</p>
+          {existingProposal.ethics_file && (
+            <a href={'http://localhost:5000/api/uploads/' + existingProposal.ethics_file}
+               target="_blank" rel="noopener noreferrer"
+               style={{ fontSize: '12px', color: '#1976d2' }}>
+              📄 View uploaded signed consent form
+            </a>
+          )}
+        </div>
       </div>
     ) : (
-    <div>
+      <div style={{ backgroundColor: 'white', border: '1px solid #eeeeee', borderRadius: '8px', padding: '20px' }}>
         {existingProposal.ethics_status === 'Resubmit' && (
           <div style={{
             backgroundColor: '#fce4e4', border: '1px solid #ef5350',
-            padding: '12px', borderRadius: '6px', fontSize: '13px', color: '#c62828', marginBottom: '12px'
+            padding: '12px', borderRadius: '6px', fontSize: '13px', color: '#c62828', marginBottom: '15px'
           }}>
-            ⚠️ The HOD could not accept your previous ethics upload. Please upload a valid, signed ethics clearance certificate below.
+            ⚠️ The HOD asked you to revise your ethics application. Please update the details below and resubmit.
           </div>
         )}
-        <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px' }}>
-          Please download the ethics form, fill it in, get it signed and upload it below.
-        </p>
 
-        {/* Ethics file upload */}
+        <p style={{ fontSize: '13px', color: '#333', marginBottom: '6px', fontWeight: 'bold' }}>
+          Does your research involve human participants?
+        </p>
+        <select
+          value={ethics.involvesHumans}
+          onChange={(e) => setEthics(Object.assign({}, ethics, { involvesHumans: e.target.value }))}
+          style={{ width: '100%', padding: '10px', border: '1px solid #cccccc', borderRadius: '4px', fontSize: '14px', backgroundColor: 'white', marginBottom: '15px' }}>
+          <option value="">-- Select --</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+
+        <p style={{ fontSize: '13px', color: '#333', marginBottom: '6px', fontWeight: 'bold' }}>
+          Describe your data collection methods
+        </p>
+        <textarea
+          value={ethics.dataMethods}
+          onChange={(e) => setEthics(Object.assign({}, ethics, { dataMethods: e.target.value }))}
+          rows={3}
+          placeholder="e.g. interviews, surveys, observation, existing datasets..."
+          style={{ width: '100%', padding: '10px', border: '1px solid #cccccc', borderRadius: '4px', fontSize: '13px', resize: 'vertical', marginBottom: '15px' }} />
+
+        <p style={{ fontSize: '13px', color: '#333', marginBottom: '6px', fontWeight: 'bold' }}>
+          Potential risks to participants and how you will mitigate them
+        </p>
+        <textarea
+          value={ethics.risks}
+          onChange={(e) => setEthics(Object.assign({}, ethics, { risks: e.target.value }))}
+          rows={3}
+          placeholder="Describe any risks and your mitigation measures..."
+          style={{ width: '100%', padding: '10px', border: '1px solid #cccccc', borderRadius: '4px', fontSize: '13px', resize: 'vertical', marginBottom: '15px' }} />
+
+        <p style={{ fontSize: '13px', color: '#333', marginBottom: '6px', fontWeight: 'bold' }}>
+          How will you obtain informed consent?
+        </p>
+        <textarea
+          value={ethics.consentProcess}
+          onChange={(e) => setEthics(Object.assign({}, ethics, { consentProcess: e.target.value }))}
+          rows={2}
+          placeholder="Describe your consent process..."
+          style={{ width: '100%', padding: '10px', border: '1px solid #cccccc', borderRadius: '4px', fontSize: '13px', resize: 'vertical', marginBottom: '15px' }} />
+
+        <p style={{ fontSize: '13px', color: '#333', marginBottom: '6px', fontWeight: 'bold' }}>
+          How will the data be stored and protected?
+        </p>
+        <textarea
+          value={ethics.dataProtection}
+          onChange={(e) => setEthics(Object.assign({}, ethics, { dataProtection: e.target.value }))}
+          rows={2}
+          placeholder="Describe your data storage and protection..."
+          style={{ width: '100%', padding: '10px', border: '1px solid #cccccc', borderRadius: '4px', fontSize: '13px', resize: 'vertical', marginBottom: '15px' }} />
+
+        <p style={{ fontSize: '13px', color: '#333', marginBottom: '6px', fontWeight: 'bold' }}>
+          Signed consent form (upload only if it must be signed by an external party — PDF)
+        </p>
         <input
           type="file"
           accept=".pdf"
-          onChange={async (e) => {
-            const ethicsFile = e.target.files[0]
-            if (!ethicsFile) return
-            if (ethicsFile.type !== 'application/pdf') {
-              alert('Only PDF files are allowed.')
-              return
-            }
-
-            try {
-              // Upload file
-              const formData = new FormData()
-              formData.append('file', ethicsFile)
-
-              const uploadRes = await fetch('http://localhost:5000/api/uploads/file', {
-                method: 'POST',
-                body: formData
-              })
-              const uploadData = await uploadRes.json()
-
-              if (!uploadRes.ok) {
-                alert(uploadData.message)
-                return
-              }
-
-              // Save ethics file
-              const response = await fetch(
-                `http://localhost:5000/api/proposals/ethics/${existingProposal.id}`,
-                {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ fileName: uploadData.fileName })
-                }
-              )
-
-              const data = await response.json()
-              if (!response.ok) { alert(data.message); return }
-
-              alert('Ethics clearance submitted successfully!')
-              // Refresh page
-              window.location.reload()
-
-            } catch (err) {
-              alert('Could not upload file.')
-              console.error(err)
-            }
+          onChange={(e) => {
+            const f = e.target.files[0]
+            if (f && f.type !== 'application/pdf') { alert('Only PDF files are allowed.'); e.target.value = null; return }
+            setConsentFile(f)
           }}
-          style={{
-            width: '100%', padding: '10px',
-            border: '1px solid #cccccc', borderRadius: '4px',
-            fontSize: '14px', marginTop: '5px'
-          }}
-        />
+          style={{ width: '100%', padding: '10px', border: '1px solid #cccccc', borderRadius: '4px', fontSize: '13px', marginBottom: '15px' }} />
+
+        <button onClick={handleEthicsSubmit} disabled={ethicsSaving} style={{
+          backgroundColor: ethicsSaving ? '#cccccc' : '#002147', color: 'white', border: 'none',
+          padding: '12px 20px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold',
+          cursor: ethicsSaving ? 'not-allowed' : 'pointer'
+        }}>
+          {ethicsSaving ? 'Submitting...' : 'Submit Ethics Application'}
+        </button>
       </div>
     )}
   </div>
@@ -502,23 +559,21 @@ function ProposalUpload() {
             </div>
 
             {/* Submit button */}
-            <button
+      <button
               onClick={handleSubmit}
-              disabled={deadlinePassed}
               style={{
                 width: '100%',
                 padding: '14px',
-                backgroundColor: deadlinePassed ? '#cccccc' : '#002147',
+                backgroundColor: '#002147',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '16px',
                 fontWeight: 'bold',
                 marginBottom: '30px',
-                cursor: deadlinePassed ? 'not-allowed' : 'pointer'
+                cursor: 'pointer'
               }}>
-              {deadlinePassed ? '❌ Submission Deadline Has Passed' :
-               isResubmitting ? '🔄 Resubmit Proposal' : 'Submit Proposal'}
+              {isResubmitting ? '🔄 Resubmit Proposal' : 'Submit Proposal'}
             </button>
 
           </div>

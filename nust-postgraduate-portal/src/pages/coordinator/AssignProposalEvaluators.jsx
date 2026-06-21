@@ -9,21 +9,23 @@ function AssignProposalEvaluators() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [proposals, setProposals] = useState([])
-  const [examiners, setExaminers] = useState([])
+  const [staff, setStaff] = useState([])
   const [reviews, setReviews] = useState([])
   const [selected, setSelected] = useState({})
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(null)
+const [saving, setSaving] = useState(null)
+  const [submitting, setSubmitting] = useState(null)
+  const [returning, setReturning] = useState(null)
 
   const fetchData = async () => {
     try {
       const [pRes, eRes, rRes] = await Promise.all([
         fetch('http://localhost:5000/api/proposals/all?departmentId=' + user.department_id),
-        fetch('http://localhost:5000/api/auth/examiners?departmentId=' + user.department_id),
+       fetch('http://localhost:5000/api/auth/supervisors?departmentId=' + user.department_id),
         fetch('http://localhost:5000/api/proposals/reviews-all?departmentId=' + user.department_id)
       ])
       setProposals(await pRes.json())
-      setExaminers(await eRes.json())
+    setStaff(await eRes.json())
       setReviews(await rRes.json())
     } catch (err) {
       console.error('Error:', err)
@@ -54,6 +56,41 @@ function AssignProposalEvaluators() {
       alert('Could not connect to server.')
     } finally {
       setSaving(null)
+    }
+  }
+
+const handleSubmitToFaculty = async (proposalId) => {
+    setSubmitting(proposalId)
+    try {
+      const res = await fetch('http://localhost:5000/api/proposals/submit-to-faculty/' + proposalId, {
+        method: 'PUT'
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.message); return }
+      alert(data.message)
+      fetchData()
+} catch (err) {
+      alert('Could not connect to server.')
+    } finally {
+      setSubmitting(null)
+    }
+  }
+
+  const handleReturnForRevision = async (proposalId) => {
+    if (!window.confirm('Return this proposal to the student for revision? They will revise with their supervisor and resubmit.')) return
+    setReturning(proposalId)
+    try {
+      const res = await fetch('http://localhost:5000/api/proposals/return-for-revision/' + proposalId, {
+        method: 'PUT'
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.message); return }
+      alert(data.message)
+      fetchData()
+    } catch (err) {
+      alert('Could not connect to server.')
+    } finally {
+      setReturning(null)
     }
   }
 
@@ -112,14 +149,20 @@ function AssignProposalEvaluators() {
 
               {prReviews.length > 0 && (
                 <div style={{ marginBottom: '12px' }}>
-                  {prReviews.map(r => (
+              {prReviews.map(r => (
                     <div key={r.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       backgroundColor: '#f9f9f9', border: '1px solid #eeeeee', borderRadius: '4px',
                       padding: '8px 12px', marginBottom: '6px'
                     }}>
-                      <span style={{ fontSize: '13px', color: '#002147' }}>{r.evaluator_name}</span>
-                      <span style={{ fontSize: '12px', color: '#666' }}>{statusLabel(r.status)}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', color: '#002147' }}>{r.evaluator_name}</span>
+                        <span style={{ fontSize: '12px', color: '#666' }}>{statusLabel(r.status)}</span>
+                      </div>
+                      {r.feedback && (
+                        <p style={{ fontSize: '12px', color: '#444', margin: '6px 0 0 0', fontStyle: 'italic', lineHeight: '1.4' }}>
+                          "{r.feedback}"
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -131,7 +174,7 @@ function AssignProposalEvaluators() {
                   onChange={(e) => setSelected({ ...selected, [p.id]: e.target.value })}
                   style={{ flex: 1, minWidth: '200px', padding: '10px', border: '1px solid #cccccc', borderRadius: '4px', fontSize: '14px', backgroundColor: 'white' }}>
                   <option value="">-- Choose an evaluator --</option>
-                  {examiners.map(ex => (
+                {staff.map(ex => (
                     <option key={ex.id} value={ex.id}>{ex.name}</option>
                   ))}
                 </select>
@@ -143,9 +186,49 @@ function AssignProposalEvaluators() {
                     padding: '10px 18px', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold',
                     cursor: saving === p.id ? 'not-allowed' : 'pointer'
                   }}>
-                  {saving === p.id ? 'Assigning...' : 'Assign Evaluator'}
+        {saving === p.id ? 'Assigning...' : 'Assign Evaluator'}
                 </button>
               </div>
+
+              {p.hdc_decision === 'approved' ? (
+                <div style={{
+                  marginTop: '14px', backgroundColor: '#e6f4ea', border: '1px solid #4caf50',
+                  color: '#2e7d32', padding: '10px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold'
+                }}>
+                  ✅ Submitted to Faculty Representative
+                </div>
+ ) : (
+                <div style={{ marginTop: '14px' }}>
+                  <button
+                    onClick={() => handleSubmitToFaculty(p.id)}
+                    disabled={approvals < 2 || submitting === p.id}
+                    style={{
+                      width: '100%',
+                      backgroundColor: (approvals < 2 || submitting === p.id) ? '#cccccc' : '#8B0000',
+                      color: 'white', border: 'none', padding: '11px', borderRadius: '4px',
+                      fontSize: '13px', fontWeight: 'bold',
+                      cursor: (approvals < 2 || submitting === p.id) ? 'not-allowed' : 'pointer'
+                    }}>
+                    {submitting === p.id
+                      ? 'Submitting...'
+                      : (approvals < 2 ? 'Needs 2 approvals to submit' : 'Submit to Faculty Representative')}
+                  </button>
+                  {prReviews.some(r => r.status === 'Feedback') && approvals < 2 && (
+                    <button
+                      onClick={() => handleReturnForRevision(p.id)}
+                      disabled={returning === p.id}
+                      style={{
+                        width: '100%', marginTop: '8px',
+                        backgroundColor: 'transparent', color: '#8B0000',
+                        border: '1px solid #8B0000', padding: '10px', borderRadius: '4px',
+                        fontSize: '13px', fontWeight: 'bold',
+                        cursor: returning === p.id ? 'not-allowed' : 'pointer'
+                      }}>
+                      {returning === p.id ? 'Returning...' : 'Return to student for revision'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}

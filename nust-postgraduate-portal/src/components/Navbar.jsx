@@ -17,10 +17,12 @@ const navLinks = {
     { label: 'Assign Supervisors', path: '/coordinator/assign-supervisor' },
     { label: 'Assign Examiners', path: '/hod/assign-examiners' },
     { label: 'Submissions', path: '/hod/submissions' },
-    { label: 'Proposal Decisions', path: '/hod/hdc-decision' },
     { label: 'Deadlines', path: '/hod/deadlines' },
     { label: 'Schedule Defence', path: '/coordinator/schedule-defence' },
     { label: 'Proposal Evaluators', path: '/coordinator/proposal-evaluators' },
+    { label: 'Graduation Report', path: '/coordinator/graduation-report' },
+    { label: 'Messages', path: '/messages' },
+    { label: 'Semester Tracking', path: '/coordinator/semester-tracking' },
     { label: 'Manage Results', path: '/hod/results' }
     
   ],
@@ -30,6 +32,9 @@ const navLinks = {
     { label: 'Review Submissions', path: '/supervisor/review' },
     { label: 'Progress Reports', path: '/supervisor/progress-reports' },
     { label: 'Release Marks', path: '/supervisor/release-results' },
+    { label: 'Proposal Reviews', path: '/supervisor/proposal-reviews' },
+    { label: 'Evaluator Feedback', path: '/supervisor/proposal-feedback' },
+    { label: 'Messages', path: '/messages' },
     { label: 'Grade Thesis', path: '/supervisor/grade' }
   ],
 
@@ -37,17 +42,20 @@ const navLinks = {
     { label: 'Dashboard', path: '/faculty-rep' },
     { label: 'Assign Coordinators', path: '/faculty-rep/assign-coordinator' },
     { label: 'HDC Results', path: '/faculty-rep/hdc-results' },
+    { label: 'Messages', path: '/messages' },
     { label: 'Faculty Approvals', path: '/faculty-rep/approvals' }
 
   ],
 
   super_admin: [
     { label: 'Dashboard', path: '/superadmin' },
+    { label: 'Messages', path: '/messages' },
     { label: 'Faculty Representatives', path: '/superadmin/faculty-reps' }
   ],
   
   examiner: [
-    { label: 'Dashboard', path: '/examiner' }
+    { label: 'Dashboard', path: '/examiner' },
+    { label: 'Messages', path: '/messages' }
   ]
 }
 

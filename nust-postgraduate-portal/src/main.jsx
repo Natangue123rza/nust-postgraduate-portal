@@ -11,6 +11,9 @@ import { AuthProvider } from './context/AuthContext'
 
 import App from './App.jsx'
 
+// Global styles (background, fonts, desktop zoom)
+import './index.css'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     {/*Browser Router wraps everything so all pages can use routing */}

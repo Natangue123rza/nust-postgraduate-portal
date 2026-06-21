@@ -107,6 +107,7 @@ const [search, setSearch] = useState('')
 const [sortBy, setSortBy] = useState('name')
 const [stages, setStages] = useState({})
 const [details, setDetails] = useState({})
+const [semesters, setSemesters] = useState({})
 const [expandedId, setExpandedId] = useState(null)
 
 useEffect(() => {
@@ -119,20 +120,25 @@ useEffect(() => {
       setStudents(data)
 
       // For each student, fetch their latest proposal + thesis to work out their stage
-     const stageMap = {}
+ const stageMap = {}
       const detailsMap = {}
+      const semMap = {}
       for (const student of data) {
-        const [propRes, thesisRes] = await Promise.all([
+        const [propRes, thesisRes, semRes] = await Promise.all([
           fetch('http://localhost:5000/api/proposals/student/' + student.id),
-          fetch('http://localhost:5000/api/theses/student/' + student.id)
+          fetch('http://localhost:5000/api/theses/student/' + student.id),
+          fetch('http://localhost:5000/api/semesters/student/' + student.id)
         ])
         const proposals = await propRes.json()
         const theses = await thesisRes.json()
+        const sems = await semRes.json()
         stageMap[student.id] = getStage(proposals[0], theses[0])
         detailsMap[student.id] = { proposal: proposals[0], thesis: theses[0] }
+        semMap[student.id] = Array.isArray(sems) ? sems.filter(s => s.status === 'registered').length : 0
       }
       setStages(stageMap)
       setDetails(detailsMap)
+      setSemesters(semMap)
     } catch (err) {
       console.error('Error fetching students:', err)
     }
@@ -292,7 +298,7 @@ const visibleStudents = students
                 {/* Spacer pushes the badges to the right */}
                 <div style={{ flex: 1 }}></div>
 
-                {/* Degree pill */}
+           {/* Degree pill */}
                 <span style={{
                   backgroundColor: student.degree === 'PhD' ? '#8B0000' : '#002147',
                   color: 'white', padding: '3px 10px',
@@ -300,6 +306,17 @@ const visibleStudents = students
                 }}>
                   {student.degree}
                 </span>
+
+                {/* Semester indicator */}
+                {semesters[student.id] > 0 && (
+                  <span style={{
+                    backgroundColor: '#f0f7ff', color: '#002147',
+                    border: '1px solid #002147', padding: '3px 10px',
+                    borderRadius: '12px', fontSize: '11px', whiteSpace: 'nowrap'
+                  }}>
+                    Semester {semesters[student.id]}
+                  </span>
+                )}
 
                 {/* Status badge */}
                 {stage && (

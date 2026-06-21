@@ -9,7 +9,11 @@ function StudentDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [currentPeriod, setCurrentPeriod] = useState(null)
-  const [supervisionTeam, setSupervisionTeam] = useState(null)
+const [supervisionTeam, setSupervisionTeam] = useState(null)
+  const [proposal, setProposal] = useState(null)
+  const [defence, setDefence] = useState(null)
+const [resultReleased, setResultReleased] = useState(false)
+  const [semesterCount, setSemesterCount] = useState(0)
 
   // Deadlines fetched from database
   const [deadlines, setDeadlines] = useState({
@@ -59,8 +63,40 @@ useEffect(() => {
       console.error('Error fetching supervision team:', err)
     }
   }
-  fetchTeam()
+fetchTeam()
 }, [user.id])
+
+  // Latest proposal, scheduled defence, and whether the result is released
+  useEffect(() => {
+    const fetchMilestones = async () => {
+      try {
+        const pRes = await fetch('http://localhost:5000/api/proposals/student/' + user.id)
+        const pData = await pRes.json()
+        let latest = null
+        if (Array.isArray(pData)) {
+          latest = pData.length ? pData.reduce((a, b) => (b.version > a.version ? b : a)) : null
+        } else if (pData && pData.id) {
+          latest = pData
+        }
+        setProposal(latest)
+
+        const dRes = await fetch('http://localhost:5000/api/presentations/student/' + user.id)
+        const dData = await dRes.json()
+        setDefence(Array.isArray(dData) && dData.length ? dData[0] : null)
+
+      const rRes = await fetch('http://localhost:5000/api/evaluations/student-released/' + user.id)
+        const rData = await rRes.json()
+        setResultReleased(Array.isArray(rData) && rData.length > 0)
+
+        const semRes = await fetch('http://localhost:5000/api/semesters/student/' + user.id)
+        const semData = await semRes.json()
+        setSemesterCount(Array.isArray(semData) ? semData.filter(s => s.status === 'registered').length : 0)
+      } catch (err) {
+        console.error('Error fetching milestones:', err)
+      }
+    }
+    fetchMilestones()
+  }, [user.id])
 
   // Calculate time remaining for a deadline
   const getTimeRemaining = (deadlineDate) => {
@@ -117,6 +153,16 @@ useEffect(() => {
            {user.programme_name || 'Namibia University of Science and Technology'} - {user.degree} Student
           </p>
         </div>
+
+      {semesterCount > 0 && (
+          <div style={{
+            backgroundColor: '#002147', color: 'white',
+            padding: '8px 16px', borderRadius: '8px', marginBottom: '20px',
+            display: 'inline-block', fontSize: '13px', fontWeight: 'bold'
+          }}>
+            📅 You are in Semester {semesterCount} of your studies
+          </div>
+        )}
 
         {currentPeriod && (
   <div style={{
@@ -231,7 +277,7 @@ useEffect(() => {
   </div>
 )}
 
-        {/* Section title */}
+   {/* Your progress overview */}
         <h2 style={{
           color: '#002147',
           marginBottom: '20px',
@@ -239,99 +285,116 @@ useEffect(() => {
           borderLeft: '4px solid #8B0000',
           paddingLeft: '10px'
         }}>
-          Student Actions
+          Your Progress
         </h2>
 
-        {/* Cards container */}
         <div style={{
-          display: 'flex',
-          gap: '20px',
-          flexWrap: 'wrap'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '16px'
         }}>
 
-          {/* Progress Report Card */}
-          <div
-            onClick={() => navigate('/student/progress-report')}
-            style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-            }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              📋 Progress Report
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Submit your semester progress report to your supervisor
-            </p>
-          </div>
-
-          {/* Proposal Card */}
+          {/* Proposal milestone */}
           <div
             onClick={() => navigate('/student/proposal')}
             style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              width: '220px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+              backgroundColor: 'white', border: '1px solid #dddddd',
+              borderTop: '4px solid #002147', padding: '20px', borderRadius: '8px',
+              cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
             }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              📄 Research Proposal
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Submit your research proposal for HDC review
+            <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
+              📄 RESEARCH PROPOSAL
+            </p>
+            <p style={{
+              fontSize: '15px', fontWeight: 'bold', margin: 0,
+              color: (proposal && proposal.status === 'Approved') ? '#2e7d32'
+                : (proposal && (proposal.faculty_status === 'Revision' || proposal.status === 'Revision Required')) ? '#e65100'
+                : proposal ? '#002147' : '#999999'
+            }}>
+              {!proposal ? 'Not submitted yet'
+                : proposal.faculty_status === 'Revision' ? 'HDC requested revisions'
+                : proposal.status === 'Approved' ? '✅ Approved by HDC'
+                : proposal.status === 'Submitted to Faculty' ? 'Submitted to faculty (HDC)'
+                : proposal.status === 'Revision Required' ? 'Revision requested by supervisor'
+                : proposal.status === 'Pending Supervisor Review' ? 'With your supervisor'
+                : proposal.status === 'Pending HDC Review' ? 'With coordinator & evaluators'
+                : (proposal.status || 'In progress')}
             </p>
           </div>
 
-          {/* Thesis Card */}
+          {/* Thesis submission milestone */}
           <div
-            onClick={() => navigate('/student/thesis')}
+            onClick={() => { if (proposal && proposal.status === 'Approved') navigate('/student/thesis') }}
             style={{
-              backgroundColor: 'white',
-              border: '1px solid #dddddd',
-              borderTop: '4px solid #002147',
-              padding: '25px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              width: '220px',
+              backgroundColor: 'white', border: '1px solid #dddddd',
+              borderTop: '4px solid ' + ((proposal && proposal.status === 'Approved') ? '#2e7d32' : '#999999'),
+              padding: '20px', borderRadius: '8px',
+              cursor: (proposal && proposal.status === 'Approved') ? 'pointer' : 'default',
               boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
             }}>
-            <h3 style={{ color: '#002147', marginBottom: '10px' }}>
-              🎓 Thesis Submission
-            </h3>
-            <p style={{ fontSize: '13px', color: '#666666' }}>
-              Submit your final thesis for examination
+            <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
+              🎓 THESIS SUBMISSION
             </p>
+            {proposal && proposal.status === 'Approved' ? (
+              <p style={{ fontSize: '15px', fontWeight: 'bold', margin: 0, color: '#2e7d32' }}>
+                Available now — submit your thesis
+              </p>
+            ) : (
+              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0, color: '#999999' }}>
+                🔒 Locked until your proposal is approved
+              </p>
+            )}
           </div>
 
-          {/* Results Card */}
-<div
-  onClick={() => navigate('/student/results')}
-  style={{
-    backgroundColor: 'white',
-    border: '1px solid #dddddd',
-    borderTop: '4px solid #8B0000',
-    padding: '25px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    width: '220px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
-  }}>
-  <h3 style={{ color: '#8B0000', marginBottom: '10px' }}>
-    📊 My Results
-  </h3>
-  <p style={{ fontSize: '13px', color: '#666666' }}>
-    View your submission statuses and examination results
-  </p>
-</div>
+          {/* Defence milestone */}
+          <div style={{
+            backgroundColor: 'white', border: '1px solid #dddddd',
+            borderTop: '4px solid #002147', padding: '20px', borderRadius: '8px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+          }}>
+            <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
+              📅 DEFENCE
+            </p>
+            {defence ? (
+              <div>
+                <p style={{ fontSize: '15px', fontWeight: 'bold', margin: '0 0 3px 0', color: '#002147' }}>
+                  {defence.defence_date ? new Date(defence.defence_date).toLocaleDateString() : 'TBC'}
+                  {defence.defence_time ? ' at ' + defence.defence_time : ''}
+                </p>
+                {defence.venue && (
+                  <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>📍 {defence.venue}</p>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0, color: '#999999' }}>
+                Not scheduled yet
+              </p>
+            )}
+          </div>
+
+          {/* Final result milestone */}
+          <div
+            onClick={() => { if (resultReleased) navigate('/student/results') }}
+            style={{
+              backgroundColor: 'white', border: '1px solid #dddddd',
+              borderTop: '4px solid ' + (resultReleased ? '#8B0000' : '#999999'),
+              padding: '20px', borderRadius: '8px',
+              cursor: resultReleased ? 'pointer' : 'default',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.07)'
+            }}>
+            <p style={{ fontSize: '12px', color: '#666', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>
+              📊 FINAL RESULT
+            </p>
+            {resultReleased ? (
+              <p style={{ fontSize: '15px', fontWeight: 'bold', margin: 0, color: '#8B0000' }}>
+                Available — open My Results
+              </p>
+            ) : (
+              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0, color: '#999999' }}>
+                Pending
+              </p>
+            )}
+          </div>
 
         </div>
 

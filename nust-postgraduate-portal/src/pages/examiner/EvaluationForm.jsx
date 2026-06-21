@@ -49,17 +49,20 @@ function EvaluationForm() {
   fetchAssignedStudents()
 }, [user.id])
 
-  // Check if examiner already evaluated selected student
+// Check if examiner already evaluated selected student — look across THIS
+  // examiner's own submissions (released or not) so the form locks right after submitting.
   useEffect(() => {
     if (!selectedStudent) return
 
     const checkExisting = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/evaluations/student/${selectedStudent.id}`
+          'http://localhost:5000/api/evaluations/examiner/' + user.id
         )
         const data = await response.json()
-        const myEvaluation = data.find(e => e.examiner_id === user.id)
+        const myEvaluation = Array.isArray(data)
+          ? data.find(e => Number(e.student_id) === Number(selectedStudent.id))
+          : null
         setExistingEvaluation(myEvaluation || null)
       } catch (err) {
         console.error('Error checking evaluation:', err)
@@ -101,9 +104,9 @@ function EvaluationForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentId: selectedStudent.id,
+   studentId: selectedStudent.id,
           examinerId: user.id,
-          examinerType: 'internal',
+          examinerType: 'external',
           sectionA: Number(sectionA),
           sectionB: Number(sectionB),
           sectionC: Number(sectionC),

@@ -4,25 +4,24 @@ import ProtectedRoute from './routes/ProtectedRoute'
 
 import Login from './pages/Login'
 import StudentDashboard from './pages/student/StudentDashboard'
-import HODDashboard from './pages/hod/HODDashboard'
+import HODDashboard from './pages/coordinator/HODDashboard'
 import SupervisorDashboard from './pages/supervisor/SupervisorDashboard'
 import ExaminerDashboard from './pages/examiner/ExaminerDashboard'
 import ProgressReport from './pages/student/ProgressReport'
-import AssignExaminers from './pages/hod/AssignExaminers'
+import AssignExaminers from './pages/coordinator/AssignExaminers'
 import EvaluationForm from './pages/examiner/EvaluationForm'
 import StudentList from './pages/supervisor/StudentList'
 import ProposalUpload from './pages/student/ProposalUpload'
 import ThesisSubmission from './pages/student/ThesisSubmission'
 import ProgressReportReview from './pages/supervisor/ProgressReportReview'
-import ViewSubmissions from './pages/hod/ViewSubmissions'
-import HDCDecision from './pages/hod/HDCDecision'
-import SetDeadlines from './pages/hod/SetDeadlines'
-import SetAcademicPeriod from './pages/hod/SetAcademicPeriod'
+import ViewSubmissions from './pages/coordinator/ViewSubmissions'
+import SetDeadlines from './pages/coordinator/SetDeadlines'
+import SetAcademicPeriod from './pages/coordinator/SetAcademicPeriod'
 import Results from './pages/student/Results'
 import ViewProposals from './pages/supervisor/ViewProposals'
 import ViewTheses from './pages/supervisor/ViewTheses'
-import ManageResults from './pages/hod/ManageResults'
-import AssignSupervisor from './pages/hod/AssignSupervisor'
+import ManageResults from './pages/coordinator/ManageResults'
+import AssignSupervisor from './pages/coordinator/AssignSupervisor'
 import ReviewSubmissions from './pages/supervisor/ReviewSubmissions'
 import GradeThesis from './pages/supervisor/GradeThesis'
 import DefaultDashboard from './pages/DefaultDashboard'
@@ -36,6 +35,11 @@ import ScheduleDefence from './pages/coordinator/ScheduleDefence'
 import HdcResults from './pages/facultyrep/HdcResults'
 import ReleaseResults from './pages/supervisor/ReleaseResults'
 import AssignProposalEvaluators from './pages/coordinator/AssignProposalEvaluators'
+import ProposalReviews from './pages/supervisor/ProposalReviews'
+import ProposalFeedback from './pages/supervisor/ProposalFeedback'
+import GraduationReport from './pages/coordinator/GraduationReport'
+import Messages from './pages/Messages'
+import SemesterTracking from './pages/coordinator/SemesterTracking'
 
 function App() {
   return (
@@ -124,13 +128,6 @@ function App() {
       <Route path="/hod/submissions" element={
         <ProtectedRoute allowedRoles={['coordinator']}>
           <ViewSubmissions />
-        </ProtectedRoute>
-      } />
-
-      {/* Coordinator: HDC / proposal decision */}
-      <Route path="/hod/hdc-decision" element={
-        <ProtectedRoute allowedRoles={['coordinator']}>
-          <HDCDecision />
         </ProtectedRoute>
       } />
 
@@ -266,6 +263,36 @@ function App() {
       <Route path="/coordinator/proposal-evaluators" element={
         <ProtectedRoute allowedRoles={['coordinator']}>
           <AssignProposalEvaluators />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/supervisor/proposal-reviews" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <ProposalReviews />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/supervisor/proposal-feedback" element={
+        <ProtectedRoute allowedRoles={['supervisor']}>
+          <ProposalFeedback />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/coordinator/graduation-report" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <GraduationReport />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/messages" element={
+        <ProtectedRoute allowedRoles={['supervisor', 'coordinator', 'faculty_rep', 'examiner', 'super_admin']}>
+          <Messages />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/coordinator/semester-tracking" element={
+        <ProtectedRoute allowedRoles={['coordinator']}>
+          <SemesterTracking />
         </ProtectedRoute>
       } />
 

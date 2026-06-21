@@ -1,4 +1,4 @@
-// src/pages/hod/ManageResults.jsx
+// src/pages/coordinator/ManageResults.jsx
 import { useState, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
@@ -81,7 +81,25 @@ const calculateResult = (studentDegree, activeEvals) => {
       }
     }
 
-    const agreeing = sorted.slice(bestStart, bestStart + bestLen)
+const agreeing = sorted.slice(bestStart, bestStart + bestLen)
+
+    // Pass/fail check: even when the agreeing marks are within 20, if they are evenly
+    // split on either side of the pass mark (50) with no majority — for example one
+    // examiner fails and another passes — an additional examiner is required to break
+    // the tie. (A clear majority is allowed to stand once another examiner weighs in.)
+    const passMark = 50
+    const failCount = agreeing.filter(function (m) { return m < passMark }).length
+    const passCount = agreeing.length - failCount
+    if (failCount > 0 && passCount > 0 && failCount === passCount) {
+      return {
+        finalMark: null,
+        discrepancy: true,
+        difference: agreeing[agreeing.length - 1] - agreeing[0],
+        status: 'Pass/Fail Split — Requires Another Examiner',
+        message: 'Examiners are split on pass/fail (' + agreeing.join(', ') + ') with no majority. At least one mark is below the pass mark of 50 and at least one is at or above it. Assign an additional examiner to break the tie.'
+      }
+    }
+
     const excluded = sorted.filter(function (m, idx) {
       return idx < bestStart || idx >= bestStart + bestLen
     })
@@ -188,8 +206,9 @@ const handleSubmitToHdc = async (studentId, studentName) => {
           const activeEvals = getActiveEvals(student.id)
           const voidedEvals = getVoidedEvals(student.id)
           const result = calculateResult(student.degree, activeEvals)
-          const isReleased = activeEvals.length > 0 && activeEvals.every(e => e.is_released)
+      const isReleased = activeEvals.length > 0 && activeEvals.every(e => e.is_released)
           const submitted = activeEvals.length > 0 && activeEvals.every(e => e.submitted_to_hdc)
+          const approved = activeEvals.length > 0 && activeEvals.every(e => e.hdc_approved)
 
           return (
             <div key={student.id} style={{
@@ -352,14 +371,25 @@ const handleSubmitToHdc = async (studentId, studentName) => {
                     </button>
                   )}
 
-                  {/* Submitted — awaiting HDC, then supervisor release */}
-                  {submitted && !isReleased && (
+            {/* Submitted — awaiting HDC approval */}
+                  {submitted && !approved && !isReleased && (
                     <div style={{
                       backgroundColor: '#e3f2fd', border: '1px solid #2196f3',
                       padding: '10px 15px', borderRadius: '6px', fontSize: '13px',
                       color: '#1565c0', marginBottom: '10px'
                     }}>
-                      Submitted for HDC approval. Once the HDC approves, the supervisor releases the mark to the student.
+                      Submitted for HDC approval — awaiting the faculty representative.
+                    </div>
+                  )}
+
+                  {/* HDC approved — awaiting supervisor release */}
+                  {approved && !isReleased && (
+                    <div style={{
+                      backgroundColor: '#e6f4ea', border: '1px solid #4caf50',
+                      padding: '10px 15px', borderRadius: '6px', fontSize: '13px',
+                      color: '#2e7d32', marginBottom: '10px'
+                    }}>
+                      ✅ Approved by the HDC — awaiting the supervisor to release the mark.
                     </div>
                   )}
 
@@ -377,15 +407,15 @@ const handleSubmitToHdc = async (studentId, studentName) => {
                        Exceeds the 20-point threshold. Review the examiners' comments,
                         then assign another evaluator or refer to the faculty committee.
                       </p>
-                      <button
-                        onClick={() => handleReassign(student.id, student.name)}
+            <button
+                        onClick={() => navigate('/hod/assign-examiners')}
                         style={{
                           backgroundColor: '#c62828', color: 'white',
                           border: 'none', padding: '8px 16px',
                           borderRadius: '4px', fontSize: '13px',
                           fontWeight: 'bold', cursor: 'pointer'
                         }}>
-                        🔄 Void & Reassign Examiner
+                        Assign another examiner →
                       </button>
                     </div>
                   )}

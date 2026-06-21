@@ -1,4 +1,4 @@
-// src/pages/hod/AssignExaminers.jsx
+// src/pages/coordinator/AssignExaminers.jsx
 import Navbar from '../../components/Navbar'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
